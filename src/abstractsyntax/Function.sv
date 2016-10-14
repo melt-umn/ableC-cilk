@@ -7,6 +7,7 @@ imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 
 
 
+{- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
 abstract production cilkFunctionDecl
 top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::[Attribute]
@@ -77,23 +78,7 @@ struct _cilk_fib_frame {
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
   newDecls <- [argStruct];
-  local argStruct :: Decl = case fname.name of
-    | "main" ->
-    txtDecl (s"""
-struct _cilk_cilk_main_args { 
-  int _cilk_proc_result;
-  int argc;
-  char**argv;
- }; """ )
-    | "fib" ->
-    txtDecl (s"""
-struct _cilk_fib_args {
-  int _cilk_proc_result;
-  int n;
- }; """ )
-
-    | _ -> error ("non supported Cilk function: " ++ fname.name ++ "\n\n")
-    end;
+  local argStruct :: Decl = makeArgsAndResultStruct(newName, bty, mty);
 
 
 -- Slow prototype --------------------------------------------------
@@ -546,3 +531,92 @@ d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
     )
     with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], d.env); } ;
 }
+
+{- based on cilkc2c/transform.c:MakeArgsAndResultStruct()
+
+   struct _cilk_foo_args {
+     return_type _cilk_proc_result; // if foo return type is not void
+     ... args ...
+   };
+-}
+function makeArgsAndResultStruct
+Decl ::= fname::Name  bty::BaseTypeExpr  mty::TypeModifierExpr
+{
+  local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtIn());
+  local resultField :: StructItem =
+    structItem(
+      [],
+      bty,
+      foldStructDeclarator([
+        structField(name("_cilk_proc_result", location=builtIn()), baseTypeExpr(), [])
+      ])
+    );
+
+  local argFields :: StructItemList =
+    case mty of
+    | functionTypeExprWithArgs(ret, args, variadic) -> makeArgFields(args)
+    | functionTypeExprWithoutArgs(ret, ids)         -> nilStructItem()
+    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
+    end;
+
+  local fields :: StructItemList =
+    case bty.typerep of
+    | builtinType(_, voidType()) -> argFields
+    | _                          -> consStructItem(resultField, argFields)
+    end;
+
+  return
+    typeExprDecl([],
+      structTypeExpr(
+        [],
+        structDecl([], justName(structName), fields, location=builtIn())
+      )
+    );
+}
+
+function makeArgFields
+StructItemList ::= args::Parameters
+{
+  return
+    case args of
+    | consParameters(h, t) -> consStructItem(makeArgField(h), makeArgFields(t))
+    | nilParameters()      -> nilStructItem()
+    end;
+}
+
+{- FIXME: char *argv[] not supported, must be char **argv -}
+function makeArgField
+StructItem ::= arg::ParameterDecl
+{
+  local n :: Name =
+    case arg.paramname of
+    | just(n1) -> n1
+    | _        -> error("cilk function parameter must be named")
+    end;
+
+  local attrs :: [Attribute] =
+    case arg of parameterDecl(_, _, _, _, attrs1) -> attrs1 end;
+
+  local bty :: BaseTypeExpr =
+    case arg of parameterDecl(_, bty1, _, _, _) -> bty1 end;
+
+  local mty :: TypeModifierExpr =
+    case arg of parameterDecl(_, _, mty1, _, _) -> mty1 end;
+
+  return
+    structItem(
+      attrs,
+      bty,
+      foldStructDeclarator([
+        structField(n, mty, [])
+      ])
+    );
+}
+
+-- New location for expressions which don't have real locations
+abstract production builtIn
+top::Location ::=
+{
+  forwards to loc("Built In", 0, 0, 0, 0, 0, 0);
+}
+

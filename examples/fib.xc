@@ -20,7 +20,7 @@ cilk int fib(int n) {
 // Check this again when we generate more Cilk code properly, maybe this 
 // will go away.
 
-cilk int main(int argc,  char *argv[]) {
+cilk int main(int argc,  char **argv) {
     printf ("Testing our Cilk extension.\n");
 
     int n, result;
