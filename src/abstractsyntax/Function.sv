@@ -4,9 +4,6 @@ imports edu:umn:cs:melt:ableC:abstractsyntax;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction;
 imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 
-
-
-
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
 abstract production cilkFunctionDecl
 top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
@@ -78,8 +75,14 @@ struct _cilk_fib_frame {
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
   newDecls <- [argStruct];
-  local argStruct :: Decl = makeArgsAndResultStruct(newName, bty, mty);
+  local argStruct :: Decl = makeArgsAndResultStruct(newName, bty, args);
 
+  local args :: Parameters =
+    case mty of
+    | functionTypeExprWithArgs(_, args1, _) -> args1
+    | functionTypeExprWithoutArgs(_, _)     -> nilParameters()
+    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
+    end;
 
 -- Slow prototype --------------------------------------------------
 -- Done.
@@ -379,33 +382,8 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
 
 -- Import Function --------------------------------------------------
   newDecls <- [ importFunction ];
-  local importFunction :: Decl = case fname.name of
-    | "main" ->
-    txtDecl (s"""
-#undef CILK_WHERE_AM_I
-#define CILK_WHERE_AM_I IN_C_CODE
-// # 43
-static void _cilk_cilk_main_import(CilkWorkerState *const _cilk_ws, void *_cilk_procargs_v) {
-  (void)_cilk_ws;
-  (void)_cilk_procargs_v;
-  ((struct _cilk_cilk_main_args*)_cilk_procargs_v)->_cilk_proc_result=cilk_main(_cilk_ws,((struct _cilk_cilk_main_args*)_cilk_procargs_v)->argc,((struct _cilk_cilk_main_args*)_cilk_procargs_v)->argv);
-// # 57
-} """ )
-
-    | "fib" ->
-    txtDecl (s"""
-#undef CILK_WHERE_AM_I
-#define CILK_WHERE_AM_I IN_C_CODE
-// # 30
-static void _cilk_fib_import ( CilkWorkerState *const _cilk_ws, void *_cilk_procargs_v) {
-  (void)_cilk_ws;
-  (void)_cilk_procargs_v;
-  ((struct _cilk_fib_args*)_cilk_procargs_v)->_cilk_proc_result=fib(_cilk_ws,((struct _cilk_fib_args*)_cilk_procargs_v)->n);
-// # 41
-} """ )
-
-    | _ -> error ("non supported Cilk function: " ++ fname.name ++ "\n\n")
-    end;
+  local importBody :: Stmt = makeImportBody(newName, args);
+  local importFunction :: Decl = makeImportFunction(newName, importBody);
 
 
 -- MT Function --------------------------------------------------
@@ -456,7 +434,6 @@ int mt_fib(CilkContext*const context,int n) {
  
 
 }
-
 
 {- Note that both fastClone and slowClone include all the (allowed)
    children from the original AST in the clones that are forwarded to.
@@ -516,8 +493,6 @@ d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
     with { env = addEnv ([ miscDef(cilk_in_fast_clone_id, emptyMiscItem()) ], d.env); } ;
 }
 
-
-
 abstract production slowClone
 d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
   dcls::Decls  body::Stmt
@@ -540,7 +515,7 @@ d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
    };
 -}
 function makeArgsAndResultStruct
-Decl ::= fname::Name  bty::BaseTypeExpr  mty::TypeModifierExpr
+Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
 {
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtIn());
   local resultField :: StructItem =
@@ -552,12 +527,7 @@ Decl ::= fname::Name  bty::BaseTypeExpr  mty::TypeModifierExpr
       ])
     );
 
-  local argFields :: StructItemList =
-    case mty of
-    | functionTypeExprWithArgs(ret, args, variadic) -> makeArgFields(args)
-    | functionTypeExprWithoutArgs(ret, ids)         -> nilStructItem()
-    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
-    end;
+  local argFields :: StructItemList = makeArgFields(args);
 
   local fields :: StructItemList =
     case bty.typerep of
@@ -610,6 +580,158 @@ StructItem ::= arg::ParameterDecl
       foldStructDeclarator([
         structField(n, mty, [])
       ])
+    );
+}
+
+{- based on cilkc2c/transform.c:MakeImportDecl() -}
+abstract production makeImportFunction
+top::Decl ::= fname::Name body::Stmt
+{
+  local whereAmI :: Decl = makeWhereAmI("IN_C_CODE");
+
+  local storage :: [StorageClass] = [staticStorageClass()];
+  local fnquals :: [SpecialSpecifier] = [];
+  local bty :: BaseTypeExpr = directTypeExpr(builtinType([], voidType()));
+--  local mty :: TypeModifierExpr = baseTypeExpr();
+  local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=builtIn());
+  local attrs :: [Attribute] = [];
+  local dcls :: Decls = nilDecl();
+
+--  local resultType :: TypeModifierExpr = baseTypeExpr(directTypeExpr(builtinType([], voidType())));
+  local resultType :: TypeModifierExpr = baseTypeExpr();
+--  local bty :: BaseTypeExpr =
+  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, importFunctionArgs, false);
+  local importFunctionArgs :: Parameters =
+    foldParameterDecl([
+      parameterDecl(
+        [],
+        typedefTypeExpr([], name("CilkWorkerState", location=builtIn())),
+        pointerTypeExpr([constQualifier()], baseTypeExpr()),
+        justName(name("_cilk_ws", location=builtIn())),
+        []
+      ),
+      parameterDecl(
+        [],
+        directTypeExpr(builtinType([], voidType())),
+        pointerTypeExpr([], baseTypeExpr()),
+        justName(name("_cilk_procargs_v", location=builtIn())),
+        []
+      )
+    ]);
+
+  local importFunction :: Decl =  functionDeclaration(
+      functionDecl(storage, fnquals, bty, mty, importProcName, attrs, dcls, body));
+
+--  forwards to whereAmI;
+  forwards to
+    decls(foldDecl([
+      whereAmI,
+      importFunction
+    ]));
+}
+
+{- based on cilkc2c/transform.c:MakeImportBody() -}
+abstract production makeImportBody
+top::Stmt ::= fname::Name args::Parameters
+{
+  local wsCastVoid :: Expr =
+    explicitCastExpr(
+      typeName(
+        directTypeExpr(builtinType([], voidType())),
+        baseTypeExpr()
+      ),
+      declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn()),
+      location=builtIn()
+    );
+  local procargsvCastVoid :: Expr =
+    explicitCastExpr(
+      typeName(
+        directTypeExpr(builtinType([], voidType())),
+        baseTypeExpr()
+      ),
+      declRefExpr(name("_cilk_procargs_v", location=builtIn()), location=builtIn()),
+      location=builtIn()
+    );
+
+  local argsStructName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtIn());
+  local procargsvCastStruct :: Expr =
+    explicitCastExpr(
+      typeName(
+        tagReferenceTypeExpr([], structSEU(), argsStructName),
+        pointerTypeExpr([], baseTypeExpr())
+      ),
+      declRefExpr(name("_cilk_procargs_v", location=builtIn()), location=builtIn()),
+      location=builtIn()
+    );
+  local procResult :: Expr =
+    memberExpr(
+      procargsvCastStruct,
+      true,
+      name("_cilk_proc_result", location=builtIn()),
+      location=builtIn()
+    );
+
+  local fastCloneArgs :: Exprs =
+    consExpr(
+      declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn()),
+      makeFastCloneArgs(args, procargsvCastStruct)
+    );
+
+  local callFastClone :: Expr =
+    callExpr(
+      declRefExpr(fname, location=builtIn()),
+      fastCloneArgs,
+      location=builtIn()
+    );
+  -- TODO: don't assign result if return void
+  local assignResult :: Expr =
+    binaryOpExpr(
+      procResult,
+      assignOp(eqOp(location=builtIn()), location=builtIn()),
+      callFastClone,
+      location=builtIn()
+    );
+
+  forwards to
+    foldStmt([
+      -- cast as void to prevent unused arg warning??
+      exprStmt(wsCastVoid),
+      exprStmt(procargsvCastVoid),
+
+      exprStmt(assignResult)
+    ]);
+}
+
+function makeFastCloneArgs
+Exprs ::= args::Parameters procargsv::Expr
+{
+  return
+    case args of
+    | consParameters(h, t) -> consExpr(makeFastCloneArg(h, procargsv), makeFastCloneArgs(t, procargsv))
+    | nilParameters()      -> nilExpr()
+    end;
+}
+
+function makeFastCloneArg
+Expr ::= arg::ParameterDecl procargsv::Expr
+{
+  local n :: Name =
+    case arg.paramname of
+    | just(n1) -> n1
+    | _        -> error("cilk function parameter must be named")
+    end;
+
+  return memberExpr(procargsv, true, n, location=builtIn());
+}
+
+function makeWhereAmI
+Decl ::= s::String
+{
+  return
+    txtDecl (s"""
+#undef CILK_WHERE_AM_I
+#define CILK_WHERE_AM_I ${s}
+"""
     );
 }
 
