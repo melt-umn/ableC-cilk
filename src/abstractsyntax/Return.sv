@@ -4,6 +4,14 @@ abstract production cilk_returnStmt
 r::Stmt ::= e::MaybeExpr
 {
   r.pp = concat ([ text("cilk"), space(), text("return"), space(), parens(e.pp) ]);
+
+  -- r.env depends on these, if not set then compiler will crash while looping
+  --  in forwarded returnStmt to look for these
+  r.globalDecls := e.globalDecls;
+  r.defs = e.defs;
+  r.freeVariables = e.freeVariables;
+  r.functiondefs = [];
+
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, r.env));
 
@@ -15,8 +23,6 @@ r::Stmt ::= e::MaybeExpr
     end;
 }
 
-
-
 {- A return in a fast clone stores the result to return in a temporary,
    calls CILK2C_BEFORE_RETURN_FAST();, then returns the temp.
  -}
@@ -26,31 +32,36 @@ r::Stmt ::= e::MaybeExpr
   local tempInt::Integer = genInt();
 
   -- ToDo: extract return type of the function from env and use below.
-  -- Now we assume the return type is int.  
+  -- Now we assume the return type is int.
   -- or use gcc type-of thing.
-  forwards to 
+  forwards to
     compoundStmt(
-      foldStmt ( 
+      foldStmt(
         case e.justTheExpr of
         | just(e) ->
             [ mkIntDeclGeneral(
+                -- TODO: cilk2c numbers tmps (e.g. _cilk_temp0), is this necessary?
                 "_cilk_tmp",
                 justInitializer(exprInitializer(e)),
                 e.location),
-              txtStmt("CILK2C_BEFORE_RETURN_FAST();"), 
+              txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
+              txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));"),
               txtStmt("return _cilk_tmp;")
             ]
-        | nothing() -> 
-           [ txtStmt("CILK2C_BEFORE_RETURN_FAST();"), 
-             txtStmt("return _cilk_tmp;") ]
-        end ) ) ;
+        | nothing() ->
+           [ txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
+             txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));"),
+             txtStmt("return;") ]
+        end
+      )
+    );
 }
 
 
 
 {- A return in a slow clone stores the result to return in a
    temporary, calls Cilk_set_result to store this in the frame,
-   calls CILK2C_BEFORE_RETURN_SLOW(), then rturns nothing.  Recall
+   calls CILK2C_BEFORE_RETURN_SLOW(), then returns nothing.  Recall
    that the return type of the slow clone is void.
  -}
 abstract production cilk_slowCloneReturn
@@ -67,3 +78,4 @@ r::Stmt ::= e::MaybeExpr
 -}
 
 }
+
