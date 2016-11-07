@@ -4,6 +4,12 @@ imports edu:umn:cs:melt:ableC:abstractsyntax;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction;
 imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 
+aspect production functionDeclaration
+top::Decl ::= f::FunctionDecl
+{
+  top.globalDecls <- [pair("CILK_WHERE_AM_I", inCCode())];
+}
+
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
 abstract production cilkFunctionDecl
 top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
@@ -29,7 +35,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   local newName :: Name = case fname.name of
                             | "main" -> name("cilk_main", location=fname.location)
-                            | n -> name(n, location=fname.location)
+                            | _ -> fname
                             end;
 
   forwards to decls ( foldDecl ( newDecls ) );
@@ -50,26 +56,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 -- should be able to collect this in a syn attr, perhaps even just
 -- pulling things out defs in the places that they are added to the env.
   newDecls <- [frameStruct];
-  local frameStruct :: Decl = case fname.name of
-    | "main" ->
-    txtDecl (s"""
-struct _cilk_cilk_main_frame {
-  CilkStackFrame header;
-  struct {int argc; char**argv;} scope0;
-  struct {int n; int result;} scope1;
- }; """ )
-
-    | "fib" ->
-    txtDecl (s"""
-struct _cilk_fib_frame {
-  CilkStackFrame header;
-  struct {int n;} scope0;
-  struct {int x; int y;} scope1;
- }; """ )
-
-    | _ -> error ("TODO: non supported Cilk function: " ++ fname.name ++ "\n\n")
-    end;
-
+  local frameStruct :: Decl = makeFrame(newName, args, body);
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
@@ -105,8 +92,8 @@ static CilkProcInfo _cilk_cilk_main_sig[] = {
     txtDecl (s"""
 static CilkProcInfo _cilk_fib_sig[] = {
   { sizeof(int),sizeof(struct _cilk_fib_frame),_cilk_fib_slow,0,0 },
-  { sizeof(int),CILK_OFFSETOF(struct _cilk_fib_frame,scope1.x),0,0,0 },
-  { sizeof(int),CILK_OFFSETOF(struct _cilk_fib_frame,scope1.y),0,0,0 },
+  { sizeof(int),CILK_OFFSETOF(struct _cilk_fib_frame,scope2.x),0,0,0 },
+  { sizeof(int),CILK_OFFSETOF(struct _cilk_fib_frame,scope2.y),0,0,0 },
   { 0,0,0,0,0 }
  }; """ )
 
@@ -201,7 +188,7 @@ static CilkProcInfo _cilk_fib_sig[] = {
         CILK2C_AFTER_SPAWN_FAST();
       }
       { _cilk_frame->header.entry=2;
-        _cilk_frame->scope1.x=x;
+        _cilk_frame->scope2.x=x;
         CILK2C_BEFORE_SPAWN_FAST();
         CILK2C_PUSH_FRAME(_cilk_frame);
         y=fib(_cilk_ws,n-2);
@@ -333,7 +320,7 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
           CILK2C_XPOP_FRAME_RESULT(_cilk_frame,/* return nothing */,_cilk_temp2);
         }
         CILK2C_AFTER_SPAWN_SLOW();
-        _cilk_frame->scope1.x=_cilk_temp2;
+        _cilk_frame->scope2.x=_cilk_temp2;
         if (0) {
           _cilk_sync1: n = _cilk_frame->scope0.n;
         }
@@ -348,7 +335,7 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
         CILK2C_XPOP_FRAME_RESULT(_cilk_frame,/* return nothing */,_cilk_temp3);
       }
       CILK2C_AFTER_SPAWN_SLOW();
-      _cilk_frame->scope1.y=_cilk_temp3;
+      _cilk_frame->scope2.y=_cilk_temp3;
       if (0) {
         _cilk_sync2: ; 
       }
@@ -364,7 +351,7 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
       CILK2C_AT_THREAD_BOUNDARY_SLOW();
     }
     {
-      { int __tmp=(_cilk_frame->scope1.x+_cilk_frame->scope1.y);
+      { int __tmp=(_cilk_frame->scope2.x+_cilk_frame->scope2.y);
         Cilk_set_result(_cilk_ws,&__tmp,sizeof((__tmp)));
       }
       CILK2C_BEFORE_RETURN_SLOW();
@@ -399,6 +386,162 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
 
 global cilk_in_fast_clone_id::String = "cilk_in_fast_clone";
 global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
+
+{- based on cilkc2c/transform.c:MakeFrame()
+
+   struct _cilk_foo_frame {
+     CilkStackFrame header;
+     { ... args ... } scope0;
+     { ... scope 1 vars ... } scope1;
+     { ... scope <n> vars ... } scope<n>;
+   };
+-}
+abstract production makeFrame
+top::Decl ::= newName::Name args::Parameters body::Stmt
+{
+  local frameFields :: StructItemList =
+    consStructItem(
+      structItem(
+        [],
+        typedefTypeExpr([], name("CilkStackFrame", location=builtIn())),
+        foldStructDeclarator([
+          structField(name("header", location=builtIn()), baseTypeExpr(), [])
+        ])
+      ),
+      scopes
+    );
+
+  local scopes :: StructItemList = consStructItem(scope0, findAllScopes(body));
+--  local scopes :: StructItemList = consStructItem(scope0, nilStructItem());
+
+  -- TODO: don't add scope0 if args are void
+  -- TODO: if return type is not an arithmetic type, put it in frame
+  local scope0 :: StructItem =
+      structItem(
+        [],
+        structTypeExpr(
+          [],
+          structDecl([], nothingName(), makeArgFields(args), location=builtIn())
+        ),
+        foldStructDeclarator([
+          structField(name("scope0", location=builtIn()), baseTypeExpr(), [])
+        ])
+      );
+
+  forwards to
+    typeExprDecl([],
+      structTypeExpr(
+        [],
+        structDecl(
+          [],
+          justName(name("_cilk_" ++ newName.name ++ "_frame", location=builtIn())),
+          frameFields,
+          location=builtIn()
+        )
+      )
+    );
+}
+
+abstract production findAllScopes
+top::StructItemList ::= body::Stmt
+{
+  forwards to foldStructItem(fst(findAllScopes1(body, 0)));
+}
+
+function findAllScopes1
+Pair<[StructItem] Integer> ::= body::Stmt n::Integer
+{
+  return
+    case body of
+    | declStmt(d) ->
+        case d of
+        | variableDecls(_, attrs, ty, dcls) ->
+            pair(
+              [
+                structItem(
+                  [],
+                  structTypeExpr(
+                    [],
+                    structDecl(
+                      [],
+                      nothingName(),
+                      foldStructItem([
+                        structItem(attrs, ty, makeStructDecls(dcls))
+                      ]),
+                      location=builtIn()
+                    )
+                  ),
+                  foldStructDeclarator([
+                    structField(
+                      name("scope" ++ toString(n), location=builtIn()),
+                      baseTypeExpr(),
+                      []
+                    )
+                  ])
+                )
+              ],
+              n
+            )
+        | _                                 -> pair([], n)
+        end
+    -- TODO: add i decl to scope
+    | forDeclStmt(i, _, _, b)     -> findAllScopes1(b, n+1)
+    | seqStmt(h, t)               ->
+        case findAllScopes1(h, n) of
+        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(t, n1))
+        end
+    | compoundStmt(s)             -> findAllScopes1(s, n+1)
+    | whileStmt(_, b)             -> findAllScopes1(b, n+1)
+    | doStmt(b, _)                -> findAllScopes1(b, n+1)
+    | forStmt(_, _, _, b)         -> findAllScopes1(b, n+1)
+    | switchStmt(_, b)            -> findAllScopes1(b, n+1)
+    | labelStmt(_, s)             -> findAllScopes1(s, n)
+    | caseLabelStmt(_, s)         -> findAllScopes1(s, n)
+    | defaultLabelStmt(s)         -> findAllScopes1(s, n)
+    | caseLabelRangeStmt(_, _, s) -> findAllScopes1(s, n)
+    -- TODO: any reason functionDeclStmt should be handled here?
+--    | functionDeclStmt(d)    ->
+    | ifStmt(_, t, e)             ->
+        case findAllScopes1(t, n) of
+        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(e, n1))
+        end
+    -- need to have explicit case for cilk_returnStmt, otherwise it will try to
+    --  forward to returnStmt and run into problems with inherited attributes
+    | cilk_returnStmt(_)          -> pair([], n)
+    | _                           -> pair([], n)
+    end;
+}
+
+abstract production mergeScopes
+top::Pair<[StructItem] Integer> ::= scopes1::[StructItem] p::Pair<[StructItem] Integer>
+{
+  forwards to
+    case p of
+      -- FIXME: this is not implemented correctly
+      pair(scopes2, n) -> pair(scopes1 ++ scopes2, n)
+    end;
+}
+
+function makeStructDecls
+StructDeclarators ::= dcls::Declarators
+{
+  return
+    case dcls of
+    | consDeclarator(h, t) ->
+        case h of
+        | declarator(n, ty, attrs, _) ->
+            consStructDeclarator(
+              structField(n, ty, attrs),
+              makeStructDecls(t)
+            )
+        | errorDeclarator(msg) ->
+            -- TODO: improve this message
+            error("errorDeclarator found")
+        end
+    | nilDeclarator()      ->
+        nilStructDeclarator()
+    end;
+}
 
 abstract production fastClone
 d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
