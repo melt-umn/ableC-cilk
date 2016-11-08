@@ -20,6 +20,8 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 abstract production cilk_fastCloneSpawn
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
+  s.syncCount = s.syncCountInh + 1;
+
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
@@ -39,9 +41,6 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       location=builtIn()
     );
 
-  -- TODO: don't hardcode syncCount to 1
-  local syncCount :: Expr = mkIntConst(1, builtIn());
-
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt =
     exprStmt(
@@ -60,7 +59,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
           location=builtIn()
         ),
         assignOp(op, location=builtIn()),
-        syncCount,
+        mkIntConst(s.syncCount, builtIn()),
         location=builtIn()
       )
     );

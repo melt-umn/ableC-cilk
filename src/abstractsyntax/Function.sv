@@ -508,6 +508,7 @@ Pair<[StructItem] Integer> ::= body::Stmt n::Integer
     -- need to have explicit case for cilk_returnStmt, otherwise it will try to
     --  forward to returnStmt and run into problems with inherited attributes
     | cilk_returnStmt(_)          -> pair([], n)
+    | cilk_syncStmt()             -> pair([], n)
     | _                           -> pair([], n)
     end;
 }
