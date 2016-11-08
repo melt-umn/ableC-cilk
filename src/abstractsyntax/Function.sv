@@ -20,15 +20,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
       -- or just remove them?  I guess supporting them in concrete syntax
       -- could lead to nicer error messages than a parse error.
 
-  top.pp = concat([ 
-      terminate(space(), map((.pp), storage)), 
+  top.pp = concat([
+      terminate(space(), map((.pp), storage)),
       terminate( space(), map( (.pp), fnquals ) ),
-      bty.pp, space(), mty.lpp, fname.pp, mty.rpp, 
-      ppAttributesRHS(attrs), line(), 
+      bty.pp, space(), mty.lpp, fname.pp, mty.rpp,
+      ppAttributesRHS(attrs), line(),
       terminate(cat(semi(), line()), dcls.pps),
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
-  
+
   local cilkElision :: Decl =
     functionDeclaration(
       functionDecl( storage, fnquals, bty, mty, fname, attrs, dcls, body) ) ;
@@ -686,19 +686,14 @@ StructItem ::= arg::ParameterDecl
 abstract production makeImportFunction
 top::Decl ::= fname::Name body::Stmt
 {
-  local whereAmI :: Decl = inCCode();
-
   local storage :: [StorageClass] = [staticStorageClass()];
   local fnquals :: [SpecialSpecifier] = [];
   local bty :: BaseTypeExpr = directTypeExpr(builtinType([], voidType()));
---  local mty :: TypeModifierExpr = baseTypeExpr();
   local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=builtIn());
   local attrs :: [Attribute] = [];
   local dcls :: Decls = nilDecl();
 
---  local resultType :: TypeModifierExpr = baseTypeExpr(directTypeExpr(builtinType([], voidType())));
   local resultType :: TypeModifierExpr = baseTypeExpr();
---  local bty :: BaseTypeExpr =
   local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, importFunctionArgs, false);
   local importFunctionArgs :: Parameters =
     foldParameterDecl([
@@ -723,10 +718,9 @@ top::Decl ::= fname::Name body::Stmt
       functionDecl(storage, fnquals, bty, mty, importProcName, attrs, dcls, body)
     );
 
---  forwards to whereAmI;
   forwards to
     decls(foldDecl([
-      whereAmI,
+      inCCode(),
       importDecl
     ]));
 }
@@ -779,8 +773,8 @@ top::Stmt ::= fname::Name args::Parameters
     );
 
   local callFastClone :: Expr =
-    callExpr(
-      declRefExpr(fname, location=builtIn()),
+    directCallExpr(
+      fname,
       fastCloneArgs,
       location=builtIn()
     );
@@ -1035,6 +1029,12 @@ Decl ::=
   return makeWhereAmI("IN_FAST_PROCEDURE");
 }
 
+function inSlowProcedure
+Decl ::=
+{
+  return makeWhereAmI("IN_SLOW_PROCEDURE");
+}
+
 function inCCode
 Decl ::=
 {
@@ -1050,6 +1050,11 @@ Decl ::= s::String
 #define CILK_WHERE_AM_I ${s}
 """
     );
+}
+
+abstract production stringMiscItem
+top::MiscItem ::= s::String
+{
 }
 
 -- New location for expressions which don't have real locations

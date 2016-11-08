@@ -23,10 +23,32 @@ top::AssignExpr_c ::= 'spawn' sb::SpawnBody
 nonterminal SpawnBody with location, ast<abs:Expr> ;
 concrete productions sb::SpawnBody
 | l::UnaryExpr_c  eq::'='  f::PostfixExpr_c '(' args::ArgumentExprList_c ')'
-  { sb.ast = cilkSpawnExpr (l.ast, abs:eqOp(location=eq.location), f.ast, 
-      abs:foldExpr(args.ast), location=sb.location); }
+  {
+    sb.ast =
+      abs:stmtExpr(
+        cilkSpawnStmt(
+          l.ast,
+          abs:eqOp(location=eq.location),
+          f.ast,
+          abs:foldExpr(args.ast)
+        ),
+        l.ast,
+        location=sb.location
+      );
+  }
 
 | l::UnaryExpr_c eq::'=' f::PostfixExpr_c '(' ')'
-    { sb.ast = cilkSpawnExpr (l.ast, abs:eqOp(location=eq.location), f.ast, 
-        abs:nilExpr(), location=sb.location); }
+  {
+    sb.ast =
+      abs:stmtExpr(
+        cilkSpawnStmt(
+          l.ast,
+          abs:eqOp(location=eq.location),
+          f.ast,
+          abs:nilExpr()
+        ),
+        l.ast,
+        location=sb.location
+      );
+  }
 
