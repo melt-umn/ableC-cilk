@@ -34,9 +34,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
       functionDecl( storage, fnquals, bty, mty, fname, attrs, dcls, body) ) ;
 
   local newName :: Name = case fname.name of
-                            | "main" -> name("cilk_main", location=fname.location)
-                            | _ -> fname
-                            end;
+                          | "main" -> name("cilk_main", location=fname.location)
+                          | _ -> fname
+                          end;
 
   forwards to decls ( foldDecl ( newDecls ) );
 
@@ -378,6 +378,54 @@ static void _cilk_fib_slow ( CilkWorkerState *const _cilk_ws, struct _cilk_fib_f
   local exportDecl :: Decl = makeExportFunction(newName, bty, args, exportBody);
 }
 
+abstract production cilkFunctionProto
+top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
+  bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::[Attribute]
+  dcls::Decls
+{
+  local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtIn());
+  local void :: BaseTypeExpr = directTypeExpr(builtinType([], voidType()));
+
+  local slowMty :: TypeModifierExpr =
+    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(fname), false);
+
+  local slowProto :: Decl =
+    variableDecls(
+      [staticStorageClass()],
+      [],
+      void,
+      consDeclarator(
+        declarator(
+          slowName, slowMty, attrs, nothingInitializer()
+        ),
+        nilDeclarator()
+      )
+    );
+
+  local fastProto :: Decl =
+    variableDecls(
+      storage, attrs, bty,
+      consDeclarator(
+        declarator(
+          fname, addWsToParams(mty), attrs, nothingInitializer()
+        ),
+        nilDeclarator()
+      )
+    );
+
+  forwards to
+    decls(foldDecl([
+    -- TODO: why do we get the following error when declaring slowProto?
+    -- TODO: do we even need to declare the slowProto?
+    -- Built In:0:0: error: Redeclaration of _cilk_fib_slow with incompatible types.
+    -- Original (from line 0)  void(CilkWorkerState const*, struct _cilk_fib_frame *)
+    -- but here it is          void(CilkWorkerState const*, struct _cilk_fib_frame *)
+
+--      slowProto,
+      fastProto
+    ]));
+}
+
 {- Note that both fastClone and slowClone include all the (allowed)
    children from the original AST in the clones that are forwarded to.
 
@@ -509,6 +557,7 @@ Pair<[StructItem] Integer> ::= body::Stmt n::Integer
     --  forward to returnStmt and run into problems with inherited attributes
     | cilk_returnStmt(_)          -> pair([], n)
     | cilk_syncStmt()             -> pair([], n)
+    | cilk_exitStmt(_)            -> pair([], n)
     | _                           -> pair([], n)
     end;
 }
@@ -542,69 +591,6 @@ StructDeclarators ::= dcls::Declarators
     | nilDeclarator()      ->
         nilStructDeclarator()
     end;
-}
-
-abstract production fastClone
-d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
-  dcls::Decls  body::Stmt
-{
-  local newParams::TypeModifierExpr =
-    case mty of
-    | functionTypeExprWithArgs(ret, args, variadic) -> 
-      functionTypeExprWithArgs(
-         ret, 
-         consParameters( 
-           parameterDecl([], 
-             typedefTypeExpr( [], name("CilkWorkerState",location=loc("ToDo",-10,-1,-1,-1,-1,-1))), 
-             pointerTypeExpr([constQualifier()],baseTypeExpr()),
-             justName( name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
-             []),
-             args
-         )
-         ,
-         variadic
-       )
-
-    | functionTypeExprWithoutArgs(ret, ids) ->
-           error("Cilk ToDo:Function: why do we use functionTypeExprWithoutArgs?")
-
-    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
-    end;
-
-
-  forwards to decls ( foldDecl ( [
-    txtDecl("#undef CILK_WHERE_AM_I"),
-    txtDecl("#define CILK_WHERE_AM_I IN_FAST_PROCEDURE"),
-
-    -- The fast clone has the header
-    --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
-    functionDeclaration(
-      functionDecl ( [], [], bty, newParams, newName, [], dcls, 
---         compoundStmt(
-           foldStmt ( [
-             txtStmt(s"struct _cilk_${newName.name}_frame*_cilk_frame;"),
-             txtStmt(s"CILK2C_INIT_FRAME(_cilk_frame,sizeof(struct _cilk_${newName.name}_frame),_cilk_${newName.name}_sig);"),
-             txtStmt(s"CILK2C_START_THREAD_FAST();"),
-              body ] ) 
-  -- )
-      )
-    )
-    ] ) )
-    with { env = addEnv ([ miscDef(cilk_in_fast_clone_id, emptyMiscItem()) ], d.env); } ;
-}
-
-abstract production slowClone
-d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr  newName::Name
-  dcls::Decls  body::Stmt
-{
-  forwards to
-    functionDeclaration(
-      functionDecl ( [], [], bty, mty, newName, [], 
-        dcls, -- ?
-        body
-      )
-    )
-    with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], d.env); } ;
 }
 
 {- based on cilkc2c/transform.c:MakeArgsAndResultStruct()
@@ -1022,6 +1008,290 @@ Expr ::= arg::ParameterDecl procargsv::Expr
     end;
 
   return memberExpr(procargsv, true, n, location=builtIn());
+}
+
+-- add CilkWorkerState*const _cilk_ws as the first parameter
+abstract production fastClone
+d::Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr newName::Name
+  dcls::Decls  body::Stmt
+{
+  forwards to
+    decls(foldDecl([
+      inFastProcedure(),
+
+      -- The fast clone has the header
+      --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
+      functionDeclaration(
+        functionDecl([], [], bty, addWsToParams(mty), newName, [], dcls, body)
+        )
+    ]));
+}
+
+abstract production addWsToParams
+top::TypeModifierExpr ::= mty::TypeModifierExpr
+{
+  local wsParam :: ParameterDecl =
+    parameterDecl(
+      [],
+      typedefTypeExpr([], name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
+      pointerTypeExpr([constQualifier()], baseTypeExpr()),
+      justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
+      []
+    );
+
+  forwards to
+    case mty of
+    | functionTypeExprWithArgs(ret, args, variadic) ->
+        functionTypeExprWithArgs(
+          ret,
+          consParameters(wsParam, args),
+          variadic
+        )
+    | functionTypeExprWithoutArgs(ret, ids) ->
+        functionTypeExprWithArgs(
+          ret,
+          consParameters(wsParam, nilParameters()),
+          false
+        )
+    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
+    end;
+
+}
+
+abstract production transformFastClone
+top::Stmt ::= body::Stmt newName::Name
+{
+  forwards to
+    foldStmt([
+      addFastStuff(newName),
+      body
+    ])
+    with {
+      env =
+        addEnv(
+          [
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+--            miscDef(cilk_new_proc_name, stringMiscItem(newName.name))
+          ],
+          top.env
+        );
+    };
+}
+
+abstract production addFastStuff
+top::Stmt ::= newName::Name
+{
+  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtIn());
+  local sigName :: Name = name("_cilk_" ++ newName.name ++ "_sig", location=builtIn());
+  local frameName :: Name = name("_cilk_frame", location=builtIn());
+  local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn());
+
+  local frameDecl :: Stmt =
+    declStmt(
+      variableDecls(
+        [],
+        [],
+        tagReferenceTypeExpr([], structSEU(), frameStructName),
+        foldDeclarator([
+          declarator(
+            frameName,
+            pointerTypeExpr([], baseTypeExpr()),
+            [],
+            justInitializer(initFrame)
+          )
+        ])
+      )
+    );
+
+  local initFrame :: Initializer =
+    exprInitializer(
+      directCallExpr(
+        name("Cilk_cilk2c_init_frame", location=builtIn()),
+        foldExpr([
+          ws,
+          unaryExprOrTypeTraitExpr(
+            sizeofOp(location=builtIn()),
+            typeNameExpr(
+              typeName(
+                tagReferenceTypeExpr([], structSEU(), frameStructName),
+                baseTypeExpr()
+              )
+            ),
+            location=builtIn()
+          ),
+          declRefExpr(sigName, location=builtIn())
+        ]),
+        location=builtIn()
+      )
+    );
+
+  local startThreadFastCp :: Stmt =
+    exprStmt(
+      directCallExpr(
+        name("Cilk_cilk2c_start_thread_fast_cp", location=builtIn()),
+        foldExpr([
+          ws,
+          mkAddressOf(
+            memberExpr(
+              declRefExpr(frameName, location=builtIn()),
+              true,
+              name("header", location=builtIn()),
+              location=builtIn()
+            ),
+            builtIn()
+          )
+        ]),
+        location=builtIn()
+      )
+    );
+
+  local eventNewThreadMaybe :: Stmt =
+    exprStmt(
+      directCallExpr(
+        name("Cilk_cilk2c_event_new_thread_maybe", location=builtIn()),
+        foldExpr([ws]),
+        location=builtIn()
+      )
+    );
+
+  forwards to
+    foldStmt([
+      frameDecl,
+      startThreadFastCp,
+      eventNewThreadMaybe
+    ]);
+}
+
+abstract production slowClone
+d::Decl ::= newName::Name dcls::Decls body::Stmt
+{
+  local slowName :: Name = name("_cilk_" ++ newName.name ++ "_slow", location=builtIn());
+  local void :: BaseTypeExpr = directTypeExpr(builtinType([], voidType()));
+
+  local newParams :: TypeModifierExpr =
+    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(newName), false);
+
+  forwards to
+    decls(foldDecl([
+      inSlowProcedure(),
+
+      -- The fast clone has the header
+      --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
+      functionDeclaration(
+        functionDecl([staticStorageClass()], [], void, newParams, slowName, [], dcls, body)
+        )
+    ]));
+}
+
+function mkSlowParams
+Parameters ::= newName::Name
+{
+  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtIn());
+
+  local wsParam :: ParameterDecl =
+    parameterDecl(
+      [],
+      typedefTypeExpr([], name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
+      pointerTypeExpr([constQualifier()], baseTypeExpr()),
+      justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
+      []
+    );
+  local frame :: ParameterDecl =
+    parameterDecl(
+      [],
+      tagReferenceTypeExpr([], structSEU(), frameStructName),
+      pointerTypeExpr([], baseTypeExpr()),
+      justName(name("_cilk_frame", location=builtIn())),
+      []
+    );
+
+  return foldParameterDecl([wsParam, frame]);
+}
+
+abstract production transformSlowClone
+top::Stmt ::= body::Stmt fname::Name newName::Name
+{
+  forwards to
+    foldStmt([
+      addSlowStuff()
+    ])
+    with { env = addEnv ([ miscDef(cilk_in_fast_clone_id, emptyMiscItem()) ], top.env); } ;
+}
+
+abstract production addSlowStuff
+top::Stmt ::=
+{
+  forwards to
+    foldStmt([
+      -- TODO: make cases for case statement
+      -- TODO: get declarations for register formals
+      nullStmt()
+    ]);
+}
+
+{- based on cilkc2c/transform.c:MakeLinkage() -}
+abstract production makeLinkage
+top::Decl ::= fname::Name bty::BaseTypeExpr
+{
+  -- TODO: set to 0 if return void
+  local sizeofRet :: Expr =
+    unaryExprOrTypeTraitExpr(
+      sizeofOp(location=builtIn()),
+      typeNameExpr(typeName(bty, baseTypeExpr())),
+      location=builtIn()
+    );
+
+  local frameStructName :: Name = name("_cilk_" ++ fname.name ++ "_frame", location=builtIn());
+  local sizeofFrame :: Expr =
+    unaryExprOrTypeTraitExpr(
+      sizeofOp(location=builtIn()),
+      typeNameExpr(
+        typeName(
+          tagReferenceTypeExpr([], structSEU(), frameStructName),
+          baseTypeExpr()
+        )
+      ),
+      location=builtIn()
+    );
+
+  local slowCloneName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtIn());
+  local slowClone :: Expr = declRefExpr(slowCloneName, location=builtIn());
+
+  local initSig :: Initializer =
+    objectInitializer(
+      foldInit([
+        init(
+          objectInitializer(
+            foldInit([
+              init(exprInitializer(sizeofRet)),
+              init(exprInitializer(sizeofFrame)),
+              init(exprInitializer(slowClone)),
+              init(exprInitializer(mkIntConst(0, builtIn()))),
+              init(exprInitializer(mkIntConst(0, builtIn())))
+            ])
+          )
+        )
+      -- TODO: scope sigs will go here, but they need to be defined from spawn/sync
+      ])
+    );
+
+  forwards to
+    decls(foldDecl([
+      inCCode(),
+      variableDecls(
+        [staticStorageClass()],
+        [],
+        typedefTypeExpr([], name("CilkProcInfo", location=builtIn())),
+        foldDeclarator([
+          declarator(
+            name("_cilk_" ++ fname.name ++ "_sig", location=builtIn()),
+            arrayTypeExprWithoutExpr(baseTypeExpr(), [], normalArraySize()),
+            [],
+            justInitializer(initSig)
+          )
+        ])
+      )
+    ]));
 }
 
 function inFastProcedure

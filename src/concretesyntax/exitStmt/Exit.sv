@@ -15,7 +15,7 @@ marking terminal CilkExit_t 'cilk_exit' lexer classes {Ckeyword};
 
 {- Cilk_exit in the MIT Cilk implementation is a macro generating
    a do-while construct.  Thus it is a statement, specifically an
-   InterationStmt_c.
+   IterationStmt_c.
 -}
 concrete production cilk_exit_c
 top::IterationStmt_c ::= 'cilk_exit' rb::ExitBody
