@@ -31,7 +31,7 @@ cilk int main(int argc,  char **argv) {
         exit(1);
     }
 
-    n = atoi(argv[1]);
+    n = atoi((const char *) argv[1]);
     spawn result = fib(n);
     sync;
 
