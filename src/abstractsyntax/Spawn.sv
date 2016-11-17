@@ -6,18 +6,25 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.pp = concat([ text("spawn"), space(), l.pp, space(), op.pp, space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
+  -- s.env depends on these, if not set then compiler will crash while looping
+  --  in forwarded stmt to look for these
+--  s.globalDecls := [];
+--  s.defs = [];
+--  s.freeVariables = [];
+--  s.functiondefs = [];
+
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   forwards to case fast,slow of
-    | true,false  -> cilk_fastCloneSpawn(l, op, f, args)
-    | false,true  -> cilk_slowCloneSpawn(l, op, f, args)
+    | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, f, args)
+    | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, f, args)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
 }
 
-abstract production cilk_fastCloneSpawn
+abstract production cilk_fastCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
   s.syncCount = s.syncCountInh + 1;
@@ -29,18 +36,64 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       args
     );
 
+  local callF :: Expr =
+    case f of
+    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtIn())
+    | _               -> callExpr(f, newArgs, location=builtIn())
+    end;
+
   --s.errors := [] ; -- TODO .... l.type   ++ f.erros ++ args.errors ;
   local assignExpr :: Expr =
     binaryOpExpr(
       l,
       assignOp(op, location=builtIn()),
-      case f of
-      | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtIn())
-      | _               -> callExpr(f, newArgs, location=builtIn())
-      end,
+      callF,
       location=builtIn()
     );
 
+  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l));
+}
+
+abstract production cilkSpawnStmtNoEqOp
+s::Stmt ::= f::Expr args::Exprs
+{
+  s.pp = concat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
+
+  local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
+  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
+
+  forwards to case fast,slow of
+    | true,false  -> cilk_fastCloneSpawnNoEqOp(f, args)
+    | false,true  -> cilk_slowCloneSpawnNoEqOp(f, args)
+    | true,true   -> error ("We think we're in both a fast and a slow clone!")
+    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    end;
+}
+
+abstract production cilk_fastCloneSpawnNoEqOp
+s::Stmt ::= f::Expr args::Exprs
+{
+  s.syncCount = s.syncCountInh + 1;
+
+  -- add _cilk_ws as first argument
+  local newArgs :: Exprs =
+    consExpr(
+      declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn()),
+      args
+    );
+
+  local callF :: Expr =
+    case f of
+    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtIn())
+    | _               -> callExpr(f, newArgs, location=builtIn())
+    end;
+
+  forwards to cilk_fastCloneSpawn(callF, nothingExpr());
+}
+
+abstract production cilk_fastCloneSpawn
+s::Stmt ::= call::Expr ml::MaybeExpr
+{
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt =
     exprStmt(
@@ -58,7 +111,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
           name("entry", location=builtIn()),
           location=builtIn()
         ),
-        assignOp(op, location=builtIn()),
+        assignOp(eqOp(location=builtIn()), location=builtIn()),
         mkIntConst(s.syncCount, builtIn()),
         location=builtIn()
       )
@@ -81,16 +134,22 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       setHeaderEntry,
       beforeSpawnFast,
       pushFrame,
-      exprStmt(assignExpr),
-      makeXPopFrame(l),
+      exprStmt(call),
+      makeXPopFrame(ml),
       afterSpawnFast
     ]);
 }
 
-abstract production cilk_slowCloneSpawn
+abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
-  forwards to error("cilk_slowCloneSpawn() not implemented yet");
+  forwards to error("cilk_slowCloneSpawnWithEqOp() not implemented yet");
+}
+
+abstract production cilk_slowCloneSpawnNoEqOp
+s::Stmt ::= f::Expr args::Exprs
+{
+  forwards to error("cilk_slowCloneSpawnNoEqOp() not implemented yet");
 }
 
 {- based on cilkc2c/transform.c:MakeXPopFrame()
@@ -107,10 +166,26 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       return r;
     }
   }
+
+  OR if ml is nothingExpr()
+
+  if (Cilk_cilk2c_pop_check(_cilk_ws)) {
+    if (Cilk_exception_handler(_cilk_ws, (void *)0, 0)) {
+      Cilk_cilk2c_pop(_cilk_ws);
+      return;
+    }
+  }
 -}
 abstract production makeXPopFrame
-top::Stmt ::= l::Expr
+top::Stmt ::= ml::MaybeExpr
 {
+  local l :: Expr =
+    case ml of
+    | justExpr(l1)  -> l1
+    | nothingExpr() -> error("internal error, attempting to extract from nothingExpr()")
+    end;
+  l.env = top.env;
+
   local tmpName :: Name = name("__tmp", location=builtIn());
   local tmpDecl :: Stmt =
     declStmt(
@@ -127,6 +202,18 @@ top::Stmt ::= l::Expr
       )
     );
 
+  local mTmpDecl :: Stmt =
+    case ml of
+    | justExpr(_)   -> tmpDecl
+    | nothingExpr() -> nullStmt()
+    end;
+
+  local mAssignTmp :: Stmt =
+    case ml of
+    | justExpr(_)   -> assignTmp
+    | nothingExpr() -> nullStmt()
+    end;
+
   local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn());
 
   local xPopFrameResult :: Stmt =
@@ -137,7 +224,7 @@ top::Stmt ::= l::Expr
         location=builtIn()
       ),
       foldStmt([
-        assignTmp,
+        mAssignTmp,
         ifExceptionHandler
       ])
     );
@@ -153,36 +240,54 @@ top::Stmt ::= l::Expr
       )
     );
 
+  local tmpAddr :: Expr =
+    case ml of
+    | justExpr(_)   -> mkAddressOf(tmp, builtIn())
+    | nothingExpr() -> mkIntConst(0, builtIn())
+    end;
+
+  local sizeofTmp :: Expr =
+    case ml of
+    | justExpr(_) ->
+        unaryExprOrTypeTraitExpr(
+          sizeofOp(location=builtIn()),
+          exprExpr(tmp),
+          location=builtIn()
+        )
+    | nothingExpr() -> mkIntConst(0, builtIn())
+    end;
+
+  -- TODO: correct XPOP_FRAME_RESULT return
+  --  /* nothing */ if slow or return void
+  --  0 if return type is scalar
+  --  _cilk_frame->dummy_return otherwise
+  local retStmt :: Stmt =
+    case ml of
+    | justExpr(_)   -> txtStmt("return 0;")
+    | nothingExpr() -> txtStmt("return;")
+    end;
+
   local ifExceptionHandler :: Stmt =
     ifStmtNoElse(
       directCallExpr(
         name("Cilk_exception_handler", location=builtIn()),
         foldExpr([
           ws,
-          mkAddressOf(tmp, builtIn()),
-          unaryExprOrTypeTraitExpr(
-            sizeofOp(location=builtIn()),
-            exprExpr(tmp),
-            location=builtIn()
-          )
+          tmpAddr,
+          sizeofTmp
         ]),
         location=builtIn()
       ),
       foldStmt([
         txtStmt("Cilk_cilk2c_pop(_cilk_ws);"),
-
-        -- TODO: correct XPOP_FRAME_RESULT return
-        --  /* nothing */ if slow or return void
-        --  0 if return type is scalar
-        --  _cilk_frame->dummy_return otherwise
-        txtStmt("return 0;")
+        retStmt
       ])
     );
 
   forwards to
     compoundStmt(
       foldStmt([
-        tmpDecl,
+        mTmpDecl,
         xPopFrameResult
       ])
     );

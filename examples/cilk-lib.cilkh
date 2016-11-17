@@ -1,0 +1,44 @@
+/* -*- Mode: C -*- */
+/*
+ * Copyright (c) 2000 Massachusetts Institute of Technology
+ * Copyright (c) 2000 Matteo Frigo
+ *
+ *  This library is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU Lesser General Public License as published by
+ *  the Free Software Foundation; either version 2.1 of the License, or (at
+ *  your option) any later version.
+ *  
+ *  This library is distributed in the hope that it will be useful, but
+ *  WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+ *  USA.
+ *
+ */
+
+#ifndef _CILK_LIB_H
+#define _CILK_LIB_H
+
+#include <cilk.h>
+
+FILE_IDENTITY (ident_cilk_lib_h,
+	       "$HeadURL: https://bradley.csail.mit.edu/svn/repos/cilk/5.4.3/runtime/cilk-lib.cilkh $ $LastChangedBy: bradley $ $Rev: 1699 $ $Date: 2004-10-22 22:22:25 -0400 (Fri, 22 Oct 2004) $");
+
+/***********************************************************\
+ * Cilk_exit
+\***********************************************************/
+
+/* Modified 11/15/2016, Travis Carlson, s/extern cilk/cilk extern/ */
+cilk extern void Cilk_really_exit(int retval);
+
+/* Cilk_exit */
+#define Cilk_exit(ret)  			\
+do {						\
+     spawn Cilk_really_exit(ret);		\
+} while (0)
+
+#endif				/* _CILK_LIB_H */

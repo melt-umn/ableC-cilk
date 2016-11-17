@@ -139,7 +139,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
     -- Original (from line 0)  void(CilkWorkerState const*, struct _cilk_fib_frame *)
     -- but here it is          void(CilkWorkerState const*, struct _cilk_fib_frame *)
 
-      slowProto,
+--      slowProto,
       fastProto
     ]));
 }
@@ -276,6 +276,7 @@ Pair<[StructItem] Integer> ::= body::Stmt n::Integer
     | cilk_returnStmt(_)          -> pair([], n)
     | cilk_syncStmt()             -> pair([], n)
     | cilk_exitStmt(_)            -> pair([], n)
+--    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
     | _                           -> pair([], n)
     end;
 }

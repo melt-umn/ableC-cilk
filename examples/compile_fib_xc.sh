@@ -21,28 +21,33 @@ cat fib.includes_for_xc fib.marker fib.xc > fib.step1.xc
 
 java -jar ../artifact/ableC.jar fib.step1.xc -I/usr/local/include/cilk
 
+# TODO: decide whether steps 2 and 4 are needed
 
 # Step 2
 # extract code from fib.step1.pp_out.c that came after code from the includes. 
 # This is the code that ableC generated from the original code.
 # This yields fib.no_includes.pp_out.c
 
-sed -n '/START_OF_XC_CODE/,$p' fib.step1.pp_out.c > fib.no_includes.pp_out.c
+#sed -n '/START_OF_XC_CODE/,$p' fib.step1.pp_out.c > fib.no_includes.pp_out.c
 
 
 # Step 4
 # put fib.includes and other ext. specified includes at the top of fib.no_includes
 # yeilding fib.c
 
-cat fib.includes_for_xc fib.includes_for_c fib.no_includes.pp_out.c > fib.includes.pp_out.c
-
+#cat fib.includes_for_c fib.no_includes.pp_out.c > fib.includes.pp_out.c
 
 # Step 5
 # compile resulting C file.
+#gcc -xc \
+#    -I/usr/local/include/cilk \
+#    -D__REENTRANT \
+#    -O2 fib.includes.pp_out.c  \
+#    -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread
 gcc -xc \
     -I/usr/local/include/cilk \
     -D__REENTRANT \
-    -O2 fib.includes.pp_out.c  \
+    -O2 fib.step1.pp_out.c  \
     -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread
 
 echo "gcc return code was $?"
