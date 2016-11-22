@@ -31,6 +31,8 @@ r::Stmt ::= e::MaybeExpr
 {
   local tempInt::Integer = genInt();
 
+  -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
+
   -- ToDo: extract return type of the function from env and use below.
   -- Now we assume the return type is int.
   -- or use gcc type-of thing.
@@ -65,17 +67,44 @@ r::Stmt ::= e::MaybeExpr
    that the return type of the slow clone is void.
  -}
 abstract production cilk_slowCloneReturn
-r::Stmt ::= e::MaybeExpr
+r::Stmt ::= me::MaybeExpr
 {
+  local e :: Expr =
+    case me of
+      justExpr(e1)  -> e1
+    | nothingExpr() -> error("internal error in cilk_slowCloneReturn, attempting to extract from nothingExpr()")
+    end;
+  e.env = r.env;
 
-  forwards to nullStmt();
-{-
+  -- TODO: handle return void
+  local tmpName :: Name = name("__tmp", location=builtIn());
+  local tmpDecl :: Stmt =
+    declStmt(
+      variableDecls([], [],
+        directTypeExpr(e.typerep),
+        foldDeclarator([
+          declarator(
+            tmpName,
+            baseTypeExpr(),
+            [],
+            justInitializer(exprInitializer(e))
+          )
+        ])
+      )
+    );
+
+  local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &__tmp, sizeof(__tmp));");
+  local beforeSlowReturn :: Stmt = txtStmt("CILK2C_BEFORE_RETURN_SLOW();");
+
+  forwards to
     compoundStmt(
-      foldStmt( [
-        compoundStmt(
-        )
-        txtStmt("");
--}
+      foldStmt([
+        tmpDecl,
+        setResult,
+        beforeSlowReturn,
+        returnStmt(nothingExpr())
+      ])
+    );
 
 }
 

@@ -40,7 +40,7 @@ s::Stmt ::=
 abstract production cilk_slowCloneSync
 s::Stmt ::=
 {
-  forwards to error("cilk_slowCloneSync() not implemented yet");
+  forwards to txtStmt("/* cilk_slowCloneSync() not implemented yet */");
 }
 
 autocopy attribute syncCountInh :: Integer occurs on Stmt, Expr;

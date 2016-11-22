@@ -143,13 +143,13 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
-  forwards to error("cilk_slowCloneSpawnWithEqOp() not implemented yet");
+  forwards to txtStmt("/* cilk_slowCloneSpawnWithEqOp() not implemented yet */");
 }
 
 abstract production cilk_slowCloneSpawnNoEqOp
 s::Stmt ::= f::Expr args::Exprs
 {
-  forwards to error("cilk_slowCloneSpawnNoEqOp() not implemented yet");
+  forwards to txtStmt("/* cilk_slowCloneSpawnNoEqOp() not implemented yet */");
 }
 
 {- based on cilkc2c/transform.c:MakeXPopFrame()

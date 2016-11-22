@@ -72,7 +72,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Slow Clone --------------------------------------------------
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
-  local slowCloneBody :: Stmt = transformSlowClone(body, fname, newName);
+  local slowCloneBody :: Stmt = transformSlowClone(body, newName);
   newDecls <- [slowCloneDecl];
 
 ---- Proc Info --------------------------------------------------
@@ -107,6 +107,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local slowMty :: TypeModifierExpr =
     functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(fname), false);
 
+  -- TODO: do all of these need to be forward declared?
+  local frameDecl :: Decl = txtDecl("struct _cilk_" ++ fname.name ++ "_frame;");
+  local argsDecl :: Decl = txtDecl("struct _cilk_" ++ fname.name ++ "_args;");
+  local importProto :: Decl = txtDecl("static void _cilk_" ++ fname.name ++
+    "_import(CilkWorkerState *const _cilk_ws, void *_cilk_procargs_v);");
+  -- TODO: does export need to be forward declared?
+--  local exportProto :: Decl = txtDecl("int mt_" ++ fname.name ++
+--    "CilkContext *const context, ...args););
+
   local slowProto :: Decl =
     variableDecls(
       [staticStorageClass()],
@@ -134,13 +143,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   forwards to
     decls(foldDecl([
     -- TODO: why do we get the following error when declaring slowProto?
-    -- TODO: do we even need to declare the slowProto?
     -- Built In:0:0: error: Redeclaration of _cilk_fib_slow with incompatible types.
     -- Original (from line 0)  void(CilkWorkerState const*, struct _cilk_fib_frame *)
     -- but here it is          void(CilkWorkerState const*, struct _cilk_fib_frame *)
 
+      frameDecl,
+      argsDecl,
 --      slowProto,
-      fastProto
+      fastProto,
+      importProto
     ]));
 }
 
@@ -928,13 +939,23 @@ Parameters ::= newName::Name
 }
 
 abstract production transformSlowClone
-top::Stmt ::= body::Stmt fname::Name newName::Name
+top::Stmt ::= body::Stmt newName::Name
 {
+  local slowBody :: Stmt = transformSlowStmt(body, newName);
+
+  -- top.env depends on these, if not set then compiler will crash while looping
+  --  in forwarded stmt to look for these
+  top.globalDecls := [];
+  top.defs = [];
+  top.freeVariables = [];
+  top.functiondefs = [];
+
   forwards to
     foldStmt([
-      addSlowStuff()
+      addSlowStuff(),
+      slowBody
     ])
-    with { env = addEnv ([ miscDef(cilk_in_fast_clone_id, emptyMiscItem()) ], top.env); } ;
+    with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
 
 abstract production addSlowStuff
@@ -946,6 +967,24 @@ top::Stmt ::=
       -- TODO: get declarations for register formals
       txtStmt("fprintf(stderr, \"slow clone not implemented, run with --nproc 1 for now\\n\"); exit(255);" )
     ]);
+}
+
+abstract production transformSlowStmt
+top::Stmt ::= body::Stmt newName::Name
+{
+  forwards to
+    case body of
+    | nullStmt()      -> nullStmt()
+    | seqStmt(h, t)   -> seqStmt(transformSlowStmt(h, newName), transformSlowStmt(t, newName))
+    | compoundStmt(s) -> compoundStmt(transformSlowStmt(s, newName))
+--    | compoundStmt(s) -> txtStmt("/* compoundStmt */")
+----    | declStmt(d)     ->
+----    | basicVarDeclStmt(d) ->
+----    | exprStmt(d)     ->
+--    | ifStmt(c, t, e) -> ifStmt(c, transformSlowStmt(t, newName), transformSlowStmt(e, newName))
+--    | _               -> txtStmt("/* transformSlowStmt not fully implemented yet */")
+    | _               -> body
+    end;
 }
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
