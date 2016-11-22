@@ -13,21 +13,10 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 --  s.freeVariables = [];
 --  s.functiondefs = [];
 
-  local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
-  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
-
-  forwards to case fast,slow of
-    | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, f, args)
-    | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, f, args)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
-    end;
-}
-
-abstract production cilk_fastCloneSpawnWithEqOp
-s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
-{
+  -- reserve a sync number
   s.syncCount = s.syncCountInh + 1;
+
+  -- TODO: transform args
 
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
@@ -36,13 +25,38 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       args
     );
 
+  -- _cilk_frame->header.entry = syncCount;
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+
+  -- TODO: save dirty variables
+
+  local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
+  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
+
   local callF :: Expr =
     case f of
     | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtIn())
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
+  forwards to
+    foldStmt([
+      setHeaderEntry,
+      case fast,slow of
+      | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
+      | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, callF, s.syncCount)
+      | true,true   -> error ("We think we're in both a fast and a slow clone!")
+      | false,false -> error ("We don't think we're in a fast or slow clone!")
+      end
+    ]);
+}
+
+abstract production cilk_fastCloneSpawnWithEqOp
+s::Stmt ::= l::Expr op::AssignOp callF::Expr
+{
   --s.errors := [] ; -- TODO .... l.type   ++ f.erros ++ args.errors ;
+
+  -- l = callF();
   local assignExpr :: Expr =
     binaryOpExpr(
       l,
@@ -59,21 +73,12 @@ s::Stmt ::= f::Expr args::Exprs
 {
   s.pp = concat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
-  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
+  -- TODO: refactor this to reuse cilkSpawnStmt code
 
-  forwards to case fast,slow of
-    | true,false  -> cilk_fastCloneSpawnNoEqOp(f, args)
-    | false,true  -> cilk_slowCloneSpawnNoEqOp(f, args)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
-    end;
-}
-
-abstract production cilk_fastCloneSpawnNoEqOp
-s::Stmt ::= f::Expr args::Exprs
-{
+  -- reserve a sync number
   s.syncCount = s.syncCountInh + 1;
+
+  -- TODO: transform args
 
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
@@ -88,40 +93,31 @@ s::Stmt ::= f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
-  forwards to cilk_fastCloneSpawn(callF, nothingExpr());
+  -- _cilk_frame->header.entry = syncCount;
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+
+  local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
+  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
+
+  forwards to
+    foldStmt([
+      setHeaderEntry,
+      case fast, slow of
+      | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
+      | false,true  -> cilk_slowCloneSpawnNoEqOp(callF)
+      | true,true   -> error ("We think we're in both a fast and a slow clone!")
+      | false,false -> error ("We don't think we're in a fast or slow clone!")
+      end
+    ]);
 }
 
 abstract production cilk_fastCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr
 {
-  -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt =
-    exprStmt(
-      binaryOpExpr(
-        -- cilk_frame->header.entry
-        memberExpr(
-          -- cilk_frame->header
-          memberExpr(
-            declRefExpr(name("_cilk_frame", location=builtIn()), location=builtIn()),
-            true,
-            name("header", location=builtIn()),
-            location=builtIn()
-          ),
-          false,
-          name("entry", location=builtIn()),
-          location=builtIn()
-        ),
-        assignOp(eqOp(location=builtIn()), location=builtIn()),
-        mkIntConst(s.syncCount, builtIn()),
-        location=builtIn()
-      )
-    );
-
   local beforeSpawnFast :: Stmt =
     txtStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));");
 
-  local pushFrame :: Stmt =
-    txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
+  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
 
   local afterSpawnFast :: Stmt =
     foldStmt([
@@ -131,7 +127,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 
   forwards to
     foldStmt([
-      setHeaderEntry,
       beforeSpawnFast,
       pushFrame,
       exprStmt(call),
@@ -141,15 +136,44 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 }
 
 abstract production cilk_slowCloneSpawnWithEqOp
-s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
+s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
 {
-  forwards to txtStmt("/* cilk_slowCloneSpawnWithEqOp() not implemented yet */");
+  local beforeSpawnSlow :: Stmt = txtStmt("CILK2C_BEFORE_SPAWN_SLOW();");
+
+  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
+
+  -- TODO: assign to tmp, not l (is this done by RestoreVariables()?)
+  -- l = callF();
+  local assignExpr :: Expr =
+    binaryOpExpr(
+      l,
+      assignOp(op, location=builtIn()),
+      callF,
+      location=builtIn()
+    );
+
+  local afterSpawnSlow :: Stmt = txtStmt("CILK2C_AFTER_SPAWN_SLOW();");
+
+  local recoveryStmt :: Stmt = txtStmt("if (0) {_cilk_sync" ++ toString(syncCount) ++ ":;}");
+  local atThreadBoundary :: Stmt = txtStmt("CILK2C_AT_THREAD_BOUNDARY_SLOW();");
+
+  -- TODO: set up link information
+  forwards to
+    foldStmt([
+      beforeSpawnSlow,
+      pushFrame,
+      exprStmt(assignExpr),
+      makeXPopFrame(nothingExpr()),
+      afterSpawnSlow,
+      recoveryStmt,
+      atThreadBoundary
+    ]);
 }
 
 abstract production cilk_slowCloneSpawnNoEqOp
-s::Stmt ::= f::Expr args::Exprs
+s::Stmt ::= callF::Expr
 {
-  forwards to txtStmt("/* cilk_slowCloneSpawnNoEqOp() not implemented yet */");
+  forwards to txtStmt("/* TODO: cilk_slowCloneSpawnNoEqOp() not implemented yet */");
 }
 
 {- based on cilkc2c/transform.c:MakeXPopFrame()
@@ -290,6 +314,33 @@ top::Stmt ::= ml::MaybeExpr
         mTmpDecl,
         xPopFrameResult
       ])
+    );
+}
+
+-- _cilk_frame->header.entry = syncCount;
+abstract production makeSetHeaderEntry
+top::Stmt ::= syncCount::Integer
+{
+  forwards to
+    exprStmt(
+      binaryOpExpr(
+        -- cilk_frame->header.entry
+        memberExpr(
+          -- cilk_frame->header
+          memberExpr(
+            declRefExpr(name("_cilk_frame", location=builtIn()), location=builtIn()),
+            true,
+            name("header", location=builtIn()),
+            location=builtIn()
+          ),
+          false,
+          name("entry", location=builtIn()),
+          location=builtIn()
+        ),
+        assignOp(eqOp(location=builtIn()), location=builtIn()),
+        mkIntConst(syncCount, builtIn()),
+        location=builtIn()
+      )
     );
 }
 

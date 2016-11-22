@@ -952,8 +952,8 @@ top::Stmt ::= body::Stmt newName::Name
 
   forwards to
     foldStmt([
-      addSlowStuff(),
-      slowBody
+      addSlowStuff()
+--      slowBody
     ])
     with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
@@ -965,7 +965,9 @@ top::Stmt ::=
     foldStmt([
       -- TODO: make cases for case statement
       -- TODO: get declarations for register formals
-      txtStmt("fprintf(stderr, \"slow clone not implemented, run with --nproc 1 for now\\n\"); exit(255);" )
+      txtStmt("fprintf(stderr, \"slow clone not implemented, run with --nproc 1 for now\\n\"); exit(255);" ),
+      -- TODO: remove these hard-coded declarations
+      txtStmt("int argc; char **argv; int n;")
     ]);
 }
 
