@@ -138,7 +138,12 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
 {
-  local beforeSpawnSlow :: Stmt = txtStmt("CILK2C_BEFORE_SPAWN_SLOW();");
+  -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
+  local beforeSpawnSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
 
   local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
 
@@ -152,10 +157,22 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
       location=builtIn()
     );
 
-  local afterSpawnSlow :: Stmt = txtStmt("CILK2C_AFTER_SPAWN_SLOW();");
+  -- expand CILK2C_AFTER_SPAWN_SLOW() macro
+  local afterSpawnSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_AFTER_SPAWN_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
 
   local recoveryStmt :: Stmt = txtStmt("if (0) {_cilk_sync" ++ toString(syncCount) ++ ":;}");
-  local atThreadBoundary :: Stmt = txtStmt("CILK2C_AT_THREAD_BOUNDARY_SLOW();");
+
+  -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
+  local atThreadBoundary :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
+      txtStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+    ]);
 
   -- TODO: set up link information
   forwards to

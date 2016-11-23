@@ -92,7 +92,14 @@ r::Stmt ::= me::MaybeExpr
     );
 
   local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &__tmp, sizeof(__tmp));");
-  local beforeSlowReturn :: Stmt = txtStmt("CILK2C_BEFORE_RETURN_SLOW();");
+
+  -- expand CILK2C_BEFORE_RETURN_SLOW() macro
+  local beforeSlowReturn :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_RETURN_SLOW macro */"),
+      txtStmt("Cilk_cilk2c_before_return_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
+      txtStmt("Cilk_cilk2c_before_return_slow(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));")
+    ]);
 
   forwards to
     compoundStmt(
