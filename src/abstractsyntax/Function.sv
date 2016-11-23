@@ -1005,7 +1005,6 @@ top::Stmt ::= args::Parameters
   forwards to
     foldStmt([
       -- TODO: make cases for case statement
-      txtStmt("fprintf(stderr, \"slow clone not implemented, run with --nproc 1 for now\\n\"); exit(255);" ),
       argDecls
     ]);
 }
