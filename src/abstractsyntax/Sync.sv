@@ -20,7 +20,7 @@ s::Stmt ::=
 
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync()
-    | false,true  -> cilk_slowCloneSync()
+    | false,true  -> cilk_slowCloneSync(s.syncCount)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -39,9 +39,48 @@ s::Stmt ::=
 }
 
 abstract production cilk_slowCloneSync
-s::Stmt ::=
+s::Stmt ::= syncCount::Integer
 {
-  forwards to txtStmt("/* cilk_slowCloneSync() not implemented yet */");
+  -- expand CILK2C_BEFORE_SYNC_SLOW() macro
+  local beforeSyncSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_SYNC_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
+
+  -- _cilk_frame->header.entry = syncCount;
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
+
+  -- TODO: save live, dirty variables
+
+  -- expand CILK2C_AFTER_SYNC_SLOW() macro
+  local afterSyncSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_AFTER_SYNC_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
+
+  -- TODO: restore variables
+  local syncLabel :: Stmt =
+    -- note: expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
+    txtStmt("if (Cilk_sync(_cilk_ws)) {return; _cilk_sync" ++ toString(syncCount) ++ ":;}");
+
+  -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
+  local atThreadBoundary :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
+      txtStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+    ]);
+
+  forwards to
+    foldStmt([
+      beforeSyncSlow,
+      setHeaderEntry,
+      syncLabel,
+      afterSyncSlow,
+      atThreadBoundary
+    ]);
 }
 
 autocopy attribute syncCountInh :: Integer occurs on Stmt, Expr;
