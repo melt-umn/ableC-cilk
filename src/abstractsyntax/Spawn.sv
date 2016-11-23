@@ -104,7 +104,7 @@ s::Stmt ::= f::Expr args::Exprs
       setHeaderEntry,
       case fast, slow of
       | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
-      | false,true  -> cilk_slowCloneSpawnNoEqOp(callF)
+      | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), s.syncCount)
       | true,true   -> error ("We think we're in both a fast and a slow clone!")
       | false,false -> error ("We don't think we're in a fast or slow clone!")
       end
@@ -138,15 +138,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
 {
-  -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
-  local beforeSpawnSlow :: Stmt =
-    foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
-      txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
-    ]);
-
-  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
-
   -- TODO: assign to tmp, not l (is this done by RestoreVariables()?)
   -- l = callF();
   local assignExpr :: Expr =
@@ -156,6 +147,21 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
       callF,
       location=builtIn()
     );
+
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), syncCount);
+}
+
+abstract production cilk_slowCloneSpawn
+s::Stmt ::= call::Expr ml::MaybeExpr syncCount::Integer
+{
+  -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
+  local beforeSpawnSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
+
+  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
@@ -179,18 +185,12 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
     foldStmt([
       beforeSpawnSlow,
       pushFrame,
-      exprStmt(assignExpr),
+      exprStmt(call),
       makeXPopFrame(nothingExpr()),
       afterSpawnSlow,
       recoveryStmt,
       atThreadBoundary
     ]);
-}
-
-abstract production cilk_slowCloneSpawnNoEqOp
-s::Stmt ::= callF::Expr
-{
-  forwards to txtStmt("/* TODO: cilk_slowCloneSpawnNoEqOp() not implemented yet */");
 }
 
 {- based on cilkc2c/transform.c:MakeXPopFrame()
