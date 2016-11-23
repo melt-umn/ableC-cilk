@@ -59,8 +59,6 @@ r::Stmt ::= e::MaybeExpr
     );
 }
 
-
-
 {- A return in a slow clone stores the result to return in a
    temporary, calls Cilk_set_result to store this in the frame,
    calls CILK2C_BEFORE_RETURN_SLOW(), then returns nothing.  Recall

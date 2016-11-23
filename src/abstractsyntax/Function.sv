@@ -72,7 +72,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Slow Clone --------------------------------------------------
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
-  local slowCloneBody :: Stmt = transformSlowClone(body, newName);
+  local slowCloneBody :: Stmt = transformSlowClone(body, newName, args);
   newDecls <- [slowCloneDecl];
 
 ---- Proc Info --------------------------------------------------
@@ -396,6 +396,45 @@ StructItem ::= arg::ParameterDecl
       foldStructDeclarator([
         structField(n, mty, [])
       ])
+    );
+}
+
+{- TODO: is there any way to refactor this by converting Parameters to
+    [ParameterDecl] then mapping a simpler function onto it? -}
+function makeArgDecls
+Stmt ::= args::Parameters
+{
+  return
+    case args of
+    | consParameters(h, t) -> seqStmt(makeArgDecl(h), makeArgDecls(t))
+    | nilParameters()      -> nullStmt()
+    end;
+}
+
+function makeArgDecl
+Stmt ::= arg::ParameterDecl
+{
+  local n :: Name =
+    case arg.paramname of
+    | just(n1) -> n1
+    | _        -> error("cilk function parameter must be named")
+    end;
+
+  local bty :: BaseTypeExpr =
+    case arg of parameterDecl(_, bty1, _, _, _) -> bty1 end;
+
+  local mty :: TypeModifierExpr =
+    case arg of parameterDecl(_, _, mty1, _, _) -> mty1 end;
+
+  local attrs :: [Attribute] =
+    case arg of parameterDecl(_, _, _, _, attrs1) -> attrs1 end;
+
+  return
+    declStmt(
+      variableDecls(
+        [], attrs, bty,
+        foldDeclarator([ declarator(n, mty, [], nothingInitializer()) ])
+      )
     );
 }
 
@@ -939,7 +978,7 @@ Parameters ::= newName::Name
 }
 
 abstract production transformSlowClone
-top::Stmt ::= body::Stmt newName::Name
+top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   local slowBody :: Stmt = transformSlowStmt(body, newName);
 
@@ -952,22 +991,22 @@ top::Stmt ::= body::Stmt newName::Name
 
   forwards to
     foldStmt([
-      addSlowStuff()
---      slowBody
+      addSlowStuff(args),
+      slowBody
     ])
     with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
 
 abstract production addSlowStuff
-top::Stmt ::=
+top::Stmt ::= args::Parameters
 {
+  local argDecls :: Stmt = makeArgDecls(args);
+
   forwards to
     foldStmt([
       -- TODO: make cases for case statement
-      -- TODO: get declarations for register formals
       txtStmt("fprintf(stderr, \"slow clone not implemented, run with --nproc 1 for now\\n\"); exit(255);" ),
-      -- TODO: remove these hard-coded declarations
-      txtStmt("int argc; char **argv; int n;")
+      argDecls
     ]);
 }
 
