@@ -980,8 +980,6 @@ Parameters ::= newName::Name
 abstract production transformSlowClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
-  local slowBody :: Stmt = transformSlowStmt(body, newName);
-
   -- top.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   top.globalDecls := [];
@@ -989,42 +987,58 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.freeVariables = [];
   top.functiondefs = [];
 
-  forwards to
-    foldStmt([
-      addSlowStuff(args),
-      slowBody
-    ])
-    with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
-}
-
-abstract production addSlowStuff
-top::Stmt ::= args::Parameters
-{
   local argDecls :: Stmt = makeArgDecls(args);
 
+  -- expand CILK2C_START_THREAD_SLOW() macro
+  local startThreadSlow :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_START_THREAD_SLOW() macro */"),
+      txtStmt("Cilk_cilk2c_start_thread_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
+      txtStmt("Cilk_cilk2c_start_thread_slow(_cilk_ws, &(_cilk_frame->header));")
+    ]);
+
+  local switchHeaderEntry :: Stmt =
+    txtStmt("switch (_cilk_frame->header.entry) {" ++ makeSwitchHeaderCases(top.syncCount) ++ "}");
+
   forwards to
     foldStmt([
-      -- TODO: make cases for case statement
-      argDecls
-    ]);
+      argDecls,
+      startThreadSlow,
+--      switchHeaderEntry,
+      transformSlowStmt(body, newName)
+      -- TODO: restore variables
+    ])
+  with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
 
 abstract production transformSlowStmt
 top::Stmt ::= body::Stmt newName::Name
 {
   forwards to
-    case body of
-    | nullStmt()      -> nullStmt()
-    | seqStmt(h, t)   -> seqStmt(transformSlowStmt(h, newName), transformSlowStmt(t, newName))
-    | compoundStmt(s) -> compoundStmt(transformSlowStmt(s, newName))
---    | compoundStmt(s) -> txtStmt("/* compoundStmt */")
-----    | declStmt(d)     ->
-----    | basicVarDeclStmt(d) ->
-----    | exprStmt(d)     ->
---    | ifStmt(c, t, e) -> ifStmt(c, transformSlowStmt(t, newName), transformSlowStmt(e, newName))
---    | _               -> txtStmt("/* transformSlowStmt not fully implemented yet */")
-    | _               -> body
-    end;
+    foldStmt([
+      case body of
+      | nullStmt()      -> nullStmt()
+      | seqStmt(h, t)   -> seqStmt(transformSlowStmt(h, newName), transformSlowStmt(t, newName))
+      | compoundStmt(s) -> compoundStmt(transformSlowStmt(s, newName))
+  --    | compoundStmt(s) -> txtStmt("/* compoundStmt */")
+  ----    | declStmt(d)     ->
+  ----    | basicVarDeclStmt(d) ->
+  ----    | exprStmt(d)     ->
+  --    | ifStmt(c, t, e) -> ifStmt(c, transformSlowStmt(t, newName), transformSlowStmt(e, newName))
+  --    | _               -> txtStmt("/* transformSlowStmt not fully implemented yet */")
+      | _               -> body
+      end
+    ]);
+}
+
+function makeSwitchHeaderCases
+String ::= syncCount::Integer
+{
+  return
+    if   syncCount < 1
+    then ""
+    else "case " ++ toString(syncCount) ++ ": goto _cilk_sync" ++
+      toString(syncCount) ++ "; " ++ makeSwitchHeaderCases(syncCount - 1);
 }
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
