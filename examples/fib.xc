@@ -21,7 +21,7 @@ cilk int main(int argc,  char **argv) {
     }
 
     n = atoi((const char *) argv[1]);
-    spawn result = fib(n);
+    spawn { result = fib(n) };
     sync;
 
     printf("Result: %d\n", result);
@@ -34,8 +34,8 @@ cilk int fib(int n) {
         cilk_return (n);
     else {
         int x, y;
-        spawn x = fib(n - 1);
-        spawn y = fib(n - 2);
+        spawn { x = fib(n - 1) };
+        spawn { y = fib(n - 2) } ;
         sync;
         cilk_return (x + y);
   }

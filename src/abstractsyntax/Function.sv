@@ -287,7 +287,7 @@ Pair<[StructItem] Integer> ::= body::Stmt n::Integer
     | cilk_returnStmt(_)          -> pair([], n)
     | cilk_syncStmt()             -> pair([], n)
     | cilk_exitStmt(_)            -> pair([], n)
---    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
+    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
     | _                           -> pair([], n)
     end;
 }
@@ -1004,7 +1004,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     foldStmt([
       argDecls,
       startThreadSlow,
---      switchHeaderEntry,
+      switchHeaderEntry,
       transformSlowStmt(body, newName)
       -- TODO: restore variables
     ])

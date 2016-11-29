@@ -8,10 +8,10 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
---  s.globalDecls := [];
---  s.defs = [];
---  s.freeVariables = [];
---  s.functiondefs = [];
+  s.globalDecls := [];
+  s.defs = [];
+  s.freeVariables = [];
+  s.functiondefs = [];
 
   -- reserve a sync number
   s.syncCount = s.syncCountInh + 1;
