@@ -288,6 +288,7 @@ Pair<[StructItem] Integer> ::= body::Stmt n::Integer
     | cilk_syncStmt()             -> pair([], n)
     | cilk_exitStmt(_)            -> pair([], n)
     | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
+    | cilkSpawnStmtNoEqOp(_, _)   -> pair([], n)
     | _                           -> pair([], n)
     end;
 }
@@ -1005,32 +1006,33 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
-      transformSlowStmt(body, newName)
+      body
+--      transformSlowStmt(body, newName)
       -- TODO: restore variables
     ])
   with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
 
-abstract production transformSlowStmt
-top::Stmt ::= body::Stmt newName::Name
-{
-  forwards to
-    foldStmt([
-      case body of
-      | nullStmt()      -> nullStmt()
-      | seqStmt(h, t)   -> seqStmt(transformSlowStmt(h, newName), transformSlowStmt(t, newName))
-      | compoundStmt(s) -> compoundStmt(transformSlowStmt(s, newName))
-  --    | compoundStmt(s) -> txtStmt("/* compoundStmt */")
-  ----    | declStmt(d)     ->
-  ----    | basicVarDeclStmt(d) ->
-  ----    | exprStmt(d)     ->
-  --    | ifStmt(c, t, e) -> ifStmt(c, transformSlowStmt(t, newName), transformSlowStmt(e, newName))
-  --    | _               -> txtStmt("/* transformSlowStmt not fully implemented yet */")
-      | _               -> body
-      end
-    ]);
-}
-
+--abstract production transformSlowStmt
+--top::Stmt ::= body::Stmt newName::Name
+--{
+--  forwards to
+--    foldStmt([
+--      case body of
+--      | nullStmt()      -> nullStmt()
+--      | seqStmt(h, t)   -> seqStmt(transformSlowStmt(h, newName), transformSlowStmt(t, newName))
+--      | compoundStmt(s) -> compoundStmt(transformSlowStmt(s, newName))
+--  --    | compoundStmt(s) -> txtStmt("/* compoundStmt */")
+--  ----    | declStmt(d)     ->
+--  ----    | basicVarDeclStmt(d) ->
+--  ----    | exprStmt(d)     ->
+--  --    | ifStmt(c, t, e) -> ifStmt(c, transformSlowStmt(t, newName), transformSlowStmt(e, newName))
+--  --    | _               -> txtStmt("/* transformSlowStmt not fully implemented yet */")
+--      | _               -> body
+--      end
+--    ]);
+--}
+--
 function makeSwitchHeaderCases
 String ::= syncCount::Integer
 {

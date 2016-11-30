@@ -1,21 +1,22 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 
 abstract production cilk_exitStmt
-e::Stmt ::= me::MaybeExpr
+s::Stmt ::= me::MaybeExpr
 {
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
-  e.globalDecls := [];
-  e.defs = [];
-  e.freeVariables = [];
-  e.functiondefs = [];
+  s.globalDecls := [];
+  s.defs = [];
+  s.freeVariables = [];
+  s.functiondefs = [];
 
   local retval :: Exprs =
     case me.justTheExpr of
     | just(e)   -> consExpr(e, nilExpr())
-    | nothing() -> nilExpr()
+    -- TODO: do we really want to default to exit 0?
+    | nothing() -> consExpr(mkIntConst(0, builtIn()), nilExpr())
     end;
-  retval.env = e.env;
+  retval.env = s.env;
 
   -- do { spawn Cilk_really_exit(ret); } while (0)
   forwards to

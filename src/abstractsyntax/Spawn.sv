@@ -13,9 +13,6 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.freeVariables = [];
   s.functiondefs = [];
 
-  -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
-
   -- TODO: transform args
 
   -- add _cilk_ws as first argument
@@ -39,15 +36,18 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
+  local spawnStmt :: Stmt =
+    case fast,slow of
+    | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
+    | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, callF)
+    | true,true   -> error ("We think we're in both a fast and a slow clone!")
+    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    end;
+
   forwards to
     foldStmt([
       setHeaderEntry,
-      case fast,slow of
-      | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
-      | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, callF, s.syncCount)
-      | true,true   -> error ("We think we're in both a fast and a slow clone!")
-      | false,false -> error ("We don't think we're in a fast or slow clone!")
-      end
+      spawnStmt
     ]);
 }
 
@@ -73,10 +73,14 @@ s::Stmt ::= f::Expr args::Exprs
 {
   s.pp = concat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  -- TODO: refactor this to reuse cilkSpawnStmt code
+  -- s.env depends on these, if not set then compiler will crash while looping
+  --  in forwarded stmt to look for these
+  s.globalDecls := [];
+  s.defs = [];
+  s.freeVariables = [];
+  s.functiondefs = [];
 
-  -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+  -- TODO: refactor this to reuse cilkSpawnStmt code
 
   -- TODO: transform args
 
@@ -93,21 +97,23 @@ s::Stmt ::= f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
-  -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
+  local spawnStmt :: Stmt =
+    case fast, slow of
+    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
+    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr())
+    | true,true   -> error ("We think we're in both a fast and a slow clone!")
+    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    end;
+
   forwards to
     foldStmt([
       setHeaderEntry,
-      case fast, slow of
-      | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
-      | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), s.syncCount)
-      | true,true   -> error ("We think we're in both a fast and a slow clone!")
-      | false,false -> error ("We don't think we're in a fast or slow clone!")
-      end
+      spawnStmt
     ]);
 }
 
@@ -136,7 +142,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 }
 
 abstract production cilk_slowCloneSpawnWithEqOp
-s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
+s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
   -- TODO: assign to tmp, not l (is this done by RestoreVariables()?)
   -- l = callF();
@@ -148,12 +154,15 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr syncCount::Integer
       location=builtIn()
     );
 
-  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), syncCount);
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l));
 }
 
 abstract production cilk_slowCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr syncCount::Integer
+s::Stmt ::= call::Expr ml::MaybeExpr
 {
+  -- reserve a sync number
+  s.syncCount = s.syncCountInh + 1;
+
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
     foldStmt([
@@ -170,7 +179,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr syncCount::Integer
       txtStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
-  local recoveryStmt :: Stmt = txtStmt("if (0) {_cilk_sync" ++ toString(syncCount) ++ ":;}");
+  local recoveryStmt :: Stmt = txtStmt("if (0) {_cilk_sync" ++ toString(s.syncCount) ++ ":;}");
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =

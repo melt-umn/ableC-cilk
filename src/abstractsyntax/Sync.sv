@@ -13,14 +13,12 @@ s::Stmt ::=
   s.freeVariables = [];
   s.functiondefs = [];
 
-  s.syncCount = s.syncCountInh + 1;
-
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync()
-    | false,true  -> cilk_slowCloneSync(s.syncCount)
+    | false,true  -> cilk_slowCloneSync()
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -39,8 +37,11 @@ s::Stmt ::=
 }
 
 abstract production cilk_slowCloneSync
-s::Stmt ::= syncCount::Integer
+s::Stmt ::=
 {
+  -- reserve a sync number
+  s.syncCount = s.syncCountInh + 1;
+
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
@@ -49,7 +50,7 @@ s::Stmt ::= syncCount::Integer
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
 
   -- TODO: save live, dirty variables
 
@@ -63,7 +64,7 @@ s::Stmt ::= syncCount::Integer
   -- TODO: restore variables
   local syncLabel :: Stmt =
     -- note: expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
-    txtStmt("if (Cilk_sync(_cilk_ws)) {return; _cilk_sync" ++ toString(syncCount) ++ ":;}");
+    txtStmt("if (Cilk_sync(_cilk_ws)) {return; _cilk_sync" ++ toString(s.syncCount) ++ ":;}");
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
@@ -83,8 +84,8 @@ s::Stmt ::= syncCount::Integer
     ]);
 }
 
-autocopy attribute syncCountInh :: Integer occurs on Stmt, Expr;
-synthesized attribute syncCount :: Integer occurs on Stmt, Expr;
+autocopy attribute syncCountInh :: Integer occurs on Stmt;
+synthesized attribute syncCount :: Integer occurs on Stmt;
 
 aspect production functionDecl
 top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]  bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name  attrs::[Attribute] decls::Decls  body::Stmt
@@ -111,19 +112,11 @@ top::Stmt ::= h::Stmt  t::Stmt
   top.syncCount = t.syncCount;
 }
 
-aspect production exprStmt
-top::Stmt ::= d::Expr
-{
-  top.syncCount = d.syncCount;
-}
-
 aspect production compoundStmt
 top::Stmt ::= s::Stmt
 {
   top.syncCount = s.syncCount;
 }
-
--- we assume there are no syncs in most forms of expressions
 
 aspect production ifStmt
 top::Stmt ::= c::Expr t::Stmt e::Stmt
@@ -190,24 +183,5 @@ aspect production caseLabelRangeStmt
 top::Stmt ::= l::Expr u::Expr s::Stmt
 {
   top.syncCount = s.syncCount;
-}
-
-aspect default production
-top::Expr ::=
-{
-  top.syncCount = top.syncCountInh;
-}
-
-aspect production parenExpr
-top::Expr ::= e::Expr
-{
-  top.syncCount = e.syncCount;
-}
-
-aspect production stmtExpr
-top::Expr ::= body::Stmt result::Expr
-{
-  result.syncCountInh = body.syncCount;
-  top.syncCount = result.syncCount;
 }
 
