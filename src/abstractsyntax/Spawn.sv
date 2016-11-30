@@ -111,22 +111,32 @@ s::Stmt ::= f::Expr args::Exprs
     end;
 
   forwards to
-    foldStmt([
-      setHeaderEntry,
-      spawnStmt
-    ]);
+    compoundStmt(
+      foldStmt([
+        setHeaderEntry,
+        spawnStmt
+      ])
+    );
 }
 
 abstract production cilk_fastCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr
 {
   local beforeSpawnFast :: Stmt =
-    txtStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));");
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_SPAWN_FAST() macro */"),
+      txtStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
+    ]);
 
-  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
+  local pushFrame :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
+      txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+    ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
+      txtStmt("/* expand CILK2C_AFTER_SPAWN_FAST() macro */"),
       txtStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
       txtStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -170,7 +180,11 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
-  local pushFrame :: Stmt = txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));");
+  local pushFrame :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
+      txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+    ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
@@ -236,7 +250,7 @@ top::Stmt ::= ml::MaybeExpr
     end;
   l.env = top.env;
 
-  local tmpName :: Name = name("__tmp", location=builtIn());
+  local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtIn());
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls([], [],
@@ -335,12 +349,11 @@ top::Stmt ::= ml::MaybeExpr
     );
 
   forwards to
-    compoundStmt(
-      foldStmt([
-        mTmpDecl,
-        xPopFrameResult
-      ])
-    );
+    foldStmt([
+      txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */"),
+      mTmpDecl,
+      xPopFrameResult
+    ]);
 }
 
 -- _cilk_frame->header.entry = syncCount;

@@ -75,7 +75,8 @@ r::Stmt ::= me::MaybeExpr
   e.env = r.env;
 
   -- TODO: handle return void
-  local tmpName :: Name = name("__tmp", location=builtIn());
+  local tmpNameStr :: String = "__tmp" ++ toString(genInt());
+  local tmpName :: Name = name(tmpNameStr, location=builtIn());
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls([], [],
@@ -91,7 +92,8 @@ r::Stmt ::= me::MaybeExpr
       )
     );
 
-  local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &__tmp, sizeof(__tmp));");
+  local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &" ++ tmpNameStr ++
+                                    ", sizeof(" ++ tmpNameStr ++ "));");
 
   -- expand CILK2C_BEFORE_RETURN_SLOW() macro
   local beforeSlowReturn :: Stmt =
