@@ -21,7 +21,7 @@ top::Stmt_c ::= 'spawn' sb::SpawnBody
 
 nonterminal SpawnBody with location, ast<abs:Stmt> ;
 concrete productions sb::SpawnBody
-| '{' l::UnaryExpr_c  eq::'='  f::PostfixExpr_c '(' args::ArgumentExprList_c ')' '}'
+| l::UnaryExpr_c  eq::'='  f::PostfixExpr_c '(' args::ArgumentExprList_c ')' ';'
   {
     sb.ast =
       cilkSpawnStmt(
@@ -32,7 +32,7 @@ concrete productions sb::SpawnBody
       );
   }
 
-| '{' l::UnaryExpr_c eq::'=' f::PostfixExpr_c '(' ')' '}'
+| l::UnaryExpr_c eq::'=' f::PostfixExpr_c '(' ')' ';'
   {
     sb.ast =
       cilkSpawnStmt(
@@ -42,4 +42,3 @@ concrete productions sb::SpawnBody
         abs:nilExpr()
       );
   }
-
