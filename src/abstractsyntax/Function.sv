@@ -856,22 +856,26 @@ top::Stmt ::= newName::Name
   local frameName :: Name = name("_cilk_frame", location=builtIn());
   local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn());
 
+  -- declare _cilk_frame and expand CILK2C_INIT_FRAME() macro
   local frameDecl :: Stmt =
-    declStmt(
-      variableDecls(
-        [],
-        [],
-        tagReferenceTypeExpr([], structSEU(), frameStructName),
-        foldDeclarator([
-          declarator(
-            frameName,
-            pointerTypeExpr([], baseTypeExpr()),
-            [],
-            justInitializer(initFrame)
-          )
-        ])
+    foldStmt([
+      txtStmt("/* declare _cilk_frame and expand CILK2C_INIT_FRAME() macro */"),
+      declStmt(
+        variableDecls(
+          [],
+          [],
+          tagReferenceTypeExpr([], structSEU(), frameStructName),
+          foldDeclarator([
+            declarator(
+              frameName,
+              pointerTypeExpr([], baseTypeExpr()),
+              [],
+              justInitializer(initFrame)
+            )
+          ])
+        )
       )
-    );
+    ]);
 
   local initFrame :: Initializer =
     exprInitializer(
@@ -895,25 +899,29 @@ top::Stmt ::= newName::Name
       )
     );
 
+  -- expand CILK2C_START_THREAD_FAST() macro
   local startThreadFastCp :: Stmt =
-    exprStmt(
-      directCallExpr(
-        name("Cilk_cilk2c_start_thread_fast_cp", location=builtIn()),
-        foldExpr([
-          ws,
-          mkAddressOf(
-            memberExpr(
-              declRefExpr(frameName, location=builtIn()),
-              true,
-              name("header", location=builtIn()),
-              location=builtIn()
-            ),
-            builtIn()
-          )
-        ]),
-        location=builtIn()
+    foldStmt([
+      txtStmt("/* expand CILK2C_START_THREAD_FAST() macro */"),
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_start_thread_fast_cp", location=builtIn()),
+          foldExpr([
+            ws,
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(frameName, location=builtIn()),
+                true,
+                name("header", location=builtIn()),
+                location=builtIn()
+              ),
+              builtIn()
+            )
+          ]),
+          location=builtIn()
+        )
       )
-    );
+    ]);
 
   local eventNewThreadMaybe :: Stmt =
     exprStmt(

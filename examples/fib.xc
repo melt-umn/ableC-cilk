@@ -17,7 +17,8 @@ cilk int main(int argc,  char **argv) {
 
     if (argc != 2) {
         fprintf(stderr, "Usage: fib [<cilk options>] <n>\n");
-        cilk_exit(1);
+//        cilk_exit(1);
+        exit(1);
     }
 
     n = atoi((const char *) argv[1]);

@@ -33,6 +33,14 @@ r::Stmt ::= e::MaybeExpr
 
   -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
 
+  -- expand CILK2C_START_THREAD_FAST() macro
+  local beforeReturnFast :: Stmt =
+    foldStmt([
+      txtStmt("/* expand CILK2C_BEFORE_RETURN_FAST() macro */"),
+      txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
+      txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));")
+    ]);
+
   -- ToDo: extract return type of the function from env and use below.
   -- Now we assume the return type is int.
   -- or use gcc type-of thing.
@@ -46,13 +54,11 @@ r::Stmt ::= e::MaybeExpr
                 "_cilk_tmp",
                 justInitializer(exprInitializer(e)),
                 e.location),
-              txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-              txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));"),
+              beforeReturnFast,
               txtStmt("return _cilk_tmp;")
             ]
         | nothing() ->
-           [ txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-             txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));"),
+           [ beforeReturnFast,
              txtStmt("return;") ]
         end
       )
