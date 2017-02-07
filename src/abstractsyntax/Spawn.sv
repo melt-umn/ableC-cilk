@@ -1,4 +1,5 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
+imports silver:util:raw:treemap as tm;
 
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
@@ -45,7 +46,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
-      saveVariables(),
+      if slow then saveVariables(s.env) else nullStmt(),
       spawnStmt
     ]);
 }
@@ -113,7 +114,7 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
-        saveVariables(),
+        if slow then saveVariables(s.env) else nullStmt(),
         spawnStmt
       ])
     );
@@ -385,9 +386,47 @@ top::Stmt ::= syncCount::Integer
 
 -- TODO: implement saveVariables
 function saveVariables
-Stmt ::=
+Stmt ::= env::Decorated Env
 {
-  return txtStmt("/* TODO: save live, dirty variables */");
+  local values :: [ValueItem] =
+    map (snd, foldr(append, [], map(tm:toList, take(length(env.values)-1, env.values))));
+  local decls :: [Decorated Declarator] = getDeclsFromValues(values);
+  return
+    foldStmt([
+      txtStmt("/* TODO: save only live, dirty variables */"),
+      foldStmt(map(saveDecl, decls))
+    ]);
+}
+
+function getDeclsFromValues
+[Decorated Declarator] ::= values::[ValueItem]
+{
+  return
+    case values of
+    | v :: vs ->
+        case v of
+        | declaratorValueItem(s) -> s :: getDeclsFromValues(vs)
+        | _                      -> getDeclsFromValues(vs)
+        end
+    | []         -> []
+    end;
+}
+
+function saveDecl
+Stmt ::= d::Decorated Declarator
+{
+  return 
+    case d of
+    | declarator(n, _, _, _) ->
+--        if n.name != "_cilk_frame"
+--        then
+          txtStmt("/*_cilk_frame->scope" ++ toString(d.scopeCountInh) ++ "." ++
+            n.name ++ " = " ++ n.name ++ ";*/")
+--        else
+--          nullStmt()
+    | _                         ->
+        txtStmt("/* unsupported declarator found, will not save */")
+    end;
 }
 
 -- return first found item; otherwise error
