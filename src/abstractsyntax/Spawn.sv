@@ -25,8 +25,6 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
 
-  -- TODO: save dirty variables
-
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
@@ -47,6 +45,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
+      saveVariables(),
       spawnStmt
     ]);
 }
@@ -114,6 +113,7 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
+        saveVariables(),
         spawnStmt
       ])
     );
@@ -381,6 +381,13 @@ top::Stmt ::= syncCount::Integer
         location=builtIn()
       )
     );
+}
+
+-- TODO: implement saveVariables
+function saveVariables
+Stmt ::=
+{
+  return txtStmt("/* TODO: save live, dirty variables */");
 }
 
 -- return first found item; otherwise error
