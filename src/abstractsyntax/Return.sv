@@ -12,6 +12,9 @@ r::Stmt ::= e::MaybeExpr
   r.freeVariables = e.freeVariables;
   r.functiondefs = [];
 
+  r.scopeCount = r.scopeCountInh;
+  r.scopes = r.scopesInh;
+
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, r.env));
 
@@ -79,6 +82,7 @@ r::Stmt ::= me::MaybeExpr
     | nothingExpr() -> error("internal error in cilk_slowCloneReturn, attempting to extract from nothingExpr()")
     end;
   e.env = r.env;
+  e.returnType = r.returnType;
 
   -- TODO: handle return void
   local tmpNameStr :: String = "__tmp" ++ toString(genInt());

@@ -29,6 +29,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
 
+--  body.scopesInh = nilStructItem();
+--  body.scopeCountInh = 42;
+
   local cilkElision :: Decl =
     functionDeclaration(
       functionDecl( storage, fnquals, bty, mty, fname, attrs, dcls, body) ) ;
@@ -57,6 +60,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 -- pulling things out defs in the places that they are added to the env.
   newDecls <- [frameStruct];
   local frameStruct :: Decl = makeFrame(newName, args, body);
+--  frameStruct.scopeCountInh = 42;
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
@@ -176,6 +180,9 @@ global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
+  body.scopesInh = nilStructItem();
+  body.scopeCountInh = 0;
+
   local frameFields :: StructItemList =
     consStructItem(
       structItem(
@@ -185,13 +192,15 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
           structField(name("header", location=builtIn()), baseTypeExpr(), [])
         ])
       ),
-      scopes
+      -- only add scope0 if args aren't void
+      case args of
+      | consParameters(h, t) -> consStructItem(scope0, body.scopes)
+      | nilParameters()      -> body.scopes
+      end
     );
 
-  local scopes :: StructItemList = consStructItem(scope0, findAllScopes(body));
---  local scopes :: StructItemList = consStructItem(scope0, nilStructItem());
+--  local scopes :: StructItemList = consStructItem(scope0, findAllScopes(body));
 
-  -- TODO: don't add scope0 if args are void
   -- TODO: if return type is not an arithmetic type, put it in frame
   local scope0 :: StructItem =
       structItem(
@@ -219,111 +228,90 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
     );
 }
 
-abstract production findAllScopes
-top::StructItemList ::= body::Stmt
-{
-  forwards to foldStructItem(fst(findAllScopes1(body, 0)));
-}
-
-function findAllScopes1
-Pair<[StructItem] Integer> ::= body::Stmt n::Integer
-{
-  return
-    case body of
-    | declStmt(d) ->
-        case d of
-        | variableDecls(_, attrs, ty, dcls) ->
-            pair(
-              [
-                structItem(
-                  [],
-                  structTypeExpr(
-                    [],
-                    structDecl(
-                      [],
-                      nothingName(),
-                      foldStructItem([
-                        structItem(attrs, ty, makeStructDecls(dcls))
-                      ]),
-                      location=builtIn()
-                    )
-                  ),
-                  foldStructDeclarator([
-                    structField(
-                      name("scope" ++ toString(n), location=builtIn()),
-                      baseTypeExpr(),
-                      []
-                    )
-                  ])
-                )
-              ],
-              n
-            )
-        | _                                 -> pair([], n)
-        end
-    -- TODO: add i decl to scope
-    | forDeclStmt(i, _, _, b)     -> findAllScopes1(b, n+1)
-    | seqStmt(h, t)               ->
-        case findAllScopes1(h, n) of
-        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(t, n1))
-        end
-    | compoundStmt(s)             -> findAllScopes1(s, n+1)
-    | whileStmt(_, b)             -> findAllScopes1(b, n+1)
-    | doStmt(b, _)                -> findAllScopes1(b, n+1)
-    | forStmt(_, _, _, b)         -> findAllScopes1(b, n+1)
-    | switchStmt(_, b)            -> findAllScopes1(b, n+1)
-    | labelStmt(_, s)             -> findAllScopes1(s, n)
-    | caseLabelStmt(_, s)         -> findAllScopes1(s, n)
-    | defaultLabelStmt(s)         -> findAllScopes1(s, n)
-    | caseLabelRangeStmt(_, _, s) -> findAllScopes1(s, n)
-    -- TODO: any reason functionDeclStmt should be handled here?
---    | functionDeclStmt(d)    ->
-    | ifStmt(_, t, e)             ->
-        case findAllScopes1(t, n) of
-        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(e, n1))
-        end
-    -- need to have explicit case for cilk_returnStmt, otherwise it will try to
-    --  forward to returnStmt and run into problems with inherited attributes
-    | cilk_returnStmt(_)          -> pair([], n)
-    | cilk_syncStmt()             -> pair([], n)
-    | cilk_exitStmt(_)            -> pair([], n)
-    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
-    | cilkSpawnStmtNoEqOp(_, _)   -> pair([], n)
-    | _                           -> pair([], n)
-    end;
-}
-
-abstract production mergeScopes
-top::Pair<[StructItem] Integer> ::= scopes1::[StructItem] p::Pair<[StructItem] Integer>
-{
-  forwards to
-    case p of
-      -- FIXME: this is not implemented correctly
-      pair(scopes2, n) -> pair(scopes1 ++ scopes2, n)
-    end;
-}
-
-function makeStructDecls
-StructDeclarators ::= dcls::Declarators
-{
-  return
-    case dcls of
-    | consDeclarator(h, t) ->
-        case h of
-        | declarator(n, ty, attrs, _) ->
-            consStructDeclarator(
-              structField(n, ty, attrs),
-              makeStructDecls(t)
-            )
-        | errorDeclarator(msg) ->
-            -- TODO: improve this message
-            error("errorDeclarator found")
-        end
-    | nilDeclarator()      ->
-        nilStructDeclarator()
-    end;
-}
-
+--abstract production findAllScopes
+--top::StructItemList ::= body::Stmt
+--{
+--  forwards to foldStructItem(fst(findAllScopes1(body, 0)));
+--}
+--
+--function findAllScopes1
+--Pair<[StructItem] Integer> ::= body::Stmt n::Integer
+--{
+--  return
+--    case body of
+--    | declStmt(d) ->
+--        case d of
+--        | variableDecls(_, attrs, ty, dcls) ->
+--            pair(
+--              [
+--                structItem(
+--                  [],
+--                  structTypeExpr(
+--                    [],
+--                    structDecl(
+--                      [],
+--                      nothingName(),
+--                      foldStructItem([
+--                        structItem(attrs, ty, makeStructDecls(dcls))
+--                      ]),
+--                      location=builtIn()
+--                    )
+--                  ),
+--                  foldStructDeclarator([
+--                    structField(
+--                      name("scope" ++ toString(n), location=builtIn()),
+--                      baseTypeExpr(),
+--                      []
+--                    )
+--                  ])
+--                )
+--              ],
+--              n
+--            )
+--        | _                                 -> pair([], n)
+--        end
+--    -- TODO: add i decl to scope
+--    | forDeclStmt(i, _, _, b)     -> findAllScopes1(b, n+1)
+--    | seqStmt(h, t)               ->
+--        case findAllScopes1(h, n) of
+--        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(t, n1))
+--        end
+--    | compoundStmt(s)             -> findAllScopes1(s, n+1)
+--    | whileStmt(_, b)             -> findAllScopes1(b, n+1)
+--    | doStmt(b, _)                -> findAllScopes1(b, n+1)
+--    | forStmt(_, _, _, b)         -> findAllScopes1(b, n+1)
+--    | switchStmt(_, b)            -> findAllScopes1(b, n+1)
+--    | labelStmt(_, s)             -> findAllScopes1(s, n)
+--    | caseLabelStmt(_, s)         -> findAllScopes1(s, n)
+--    | defaultLabelStmt(s)         -> findAllScopes1(s, n)
+--    | caseLabelRangeStmt(_, _, s) -> findAllScopes1(s, n)
+--    -- TODO: any reason functionDeclStmt should be handled here?
+----    | functionDeclStmt(d)    ->
+--    | ifStmt(_, t, e)             ->
+--        case findAllScopes1(t, n) of
+--        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(e, n1))
+--        end
+--    -- need to have explicit case for cilk_returnStmt, otherwise it will try to
+--    --  forward to returnStmt and run into problems with inherited attributes
+--    | cilk_returnStmt(_)          -> pair([], n)
+--    | cilk_syncStmt()             -> pair([], n)
+--    | cilk_exitStmt(_)            -> pair([], n)
+--    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
+--    | cilkSpawnStmtNoEqOp(_, _)   -> pair([], n)
+--    | _                           -> pair([], n)
+--    end;
+--}
+--
+--abstract production mergeScopes
+--top::Pair<[StructItem] Integer> ::= scopes1::[StructItem] p::Pair<[StructItem] Integer>
+--{
+--  forwards to
+--    case p of
+--      -- FIXME: this is not implemented correctly
+--      pair(scopes2, n) -> pair(scopes1 ++ scopes2, n)
+--    end;
+--}
+--
 {- based on cilkc2c/transform.c:MakeArgsAndResultStruct()
 
    struct _cilk_foo_args {
@@ -997,6 +985,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.functiondefs = [];
 
   local argDecls :: Stmt = makeArgDecls(args);
+--  body.scopeCountInh = 42;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
@@ -1125,10 +1114,10 @@ Decl ::= s::String
     );
 }
 
-abstract production stringMiscItem
-top::MiscItem ::= s::String
-{
-}
+--abstract production stringMiscItem
+--top::MiscItem ::= s::String
+--{
+--}
 
 -- New location for expressions which don't have real locations
 abstract production builtIn

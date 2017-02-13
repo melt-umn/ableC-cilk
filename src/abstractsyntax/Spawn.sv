@@ -14,6 +14,9 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.freeVariables = [];
   s.functiondefs = [];
 
+  s.scopeCount = s.scopeCountInh;
+  s.scopes = s.scopesInh;
+
   -- TODO: transform args
 
   -- add _cilk_ws as first argument
@@ -46,7 +49,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
-      if slow then saveVariables(s.env) else nullStmt(),
+      saveVariables(s.env),
       spawnStmt
     ]);
 }
@@ -114,7 +117,7 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
-        if slow then saveVariables(s.env) else nullStmt(),
+        saveVariables(s.env),
         spawnStmt
       ])
     );
@@ -250,6 +253,7 @@ top::Stmt ::= ml::MaybeExpr
     | nothingExpr() -> error("internal error, attempting to extract from nothingExpr()")
     end;
   l.env = top.env;
+  l.returnType = top.returnType;
 
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtIn());
   local tmpDecl :: Stmt =
@@ -418,31 +422,31 @@ Stmt ::= d::Decorated Declarator
   return 
     case d of
     | declarator(n, _, _, _) ->
---        if n.name != "_cilk_frame"
---        then
-          txtStmt("/*_cilk_frame->scope" ++ toString(d.scopeCountInh) ++ "." ++
-            n.name ++ " = " ++ n.name ++ ";*/")
---        else
---          nullStmt()
+        if n.name != "_cilk_frame"
+        then
+          txtStmt("_cilk_frame->scope" ++ toString(d.scopeCountInh) ++ "." ++
+            n.name ++ " = " ++ n.name ++ ";")
+        else
+          nullStmt()
     | _                         ->
         txtStmt("/* unsupported declarator found, will not save */")
     end;
 }
 
 -- return first found item; otherwise error
-function lookupMiscString
-String ::= n::String  e::Decorated Env
-{
-  local foundItems :: [MiscItem] = lookupMisc(n, e);
-  local foundItem :: MiscItem =
-    if   null(foundItems)
-    then error(n ++ " not defined in Misc env")
-    else head(foundItems);
-
-  return
-    case foundItem of
-    | stringMiscItem(s) -> s
-    | _                 -> error(n ++ " MiscItem is not a stringMiscItem")
-    end;
-}
+--function lookupMiscString
+--String ::= n::String  e::Decorated Env
+--{
+--  local foundItems :: [MiscItem] = lookupMisc(n, e);
+--  local foundItem :: MiscItem =
+--    if   null(foundItems)
+--    then error(n ++ " not defined in Misc env")
+--    else head(foundItems);
+--
+--  return
+--    case foundItem of
+--    | stringMiscItem(s) -> s
+--    | _                 -> error(n ++ " MiscItem is not a stringMiscItem")
+--    end;
+--}
 

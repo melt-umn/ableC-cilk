@@ -13,6 +13,9 @@ s::Stmt ::=
   s.freeVariables = [];
   s.functiondefs = [];
 
+  s.scopeCount = s.scopeCountInh;
+  s.scopes = s.scopesInh;
+
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 

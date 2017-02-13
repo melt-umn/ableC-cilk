@@ -3,7 +3,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:modular_analyses:determinism;
 import edu:umn:cs:melt:ableC:host only ablecParser;
 
 copper_mda testCilkSpawn(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:spawnExpr;
+  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:spawnStmt;
 }
 
 copper_mda testFunction(ablecParser) {
