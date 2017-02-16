@@ -228,90 +228,6 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
     );
 }
 
---abstract production findAllScopes
---top::StructItemList ::= body::Stmt
---{
---  forwards to foldStructItem(fst(findAllScopes1(body, 0)));
---}
---
---function findAllScopes1
---Pair<[StructItem] Integer> ::= body::Stmt n::Integer
---{
---  return
---    case body of
---    | declStmt(d) ->
---        case d of
---        | variableDecls(_, attrs, ty, dcls) ->
---            pair(
---              [
---                structItem(
---                  [],
---                  structTypeExpr(
---                    [],
---                    structDecl(
---                      [],
---                      nothingName(),
---                      foldStructItem([
---                        structItem(attrs, ty, makeStructDecls(dcls))
---                      ]),
---                      location=builtIn()
---                    )
---                  ),
---                  foldStructDeclarator([
---                    structField(
---                      name("scope" ++ toString(n), location=builtIn()),
---                      baseTypeExpr(),
---                      []
---                    )
---                  ])
---                )
---              ],
---              n
---            )
---        | _                                 -> pair([], n)
---        end
---    -- TODO: add i decl to scope
---    | forDeclStmt(i, _, _, b)     -> findAllScopes1(b, n+1)
---    | seqStmt(h, t)               ->
---        case findAllScopes1(h, n) of
---        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(t, n1))
---        end
---    | compoundStmt(s)             -> findAllScopes1(s, n+1)
---    | whileStmt(_, b)             -> findAllScopes1(b, n+1)
---    | doStmt(b, _)                -> findAllScopes1(b, n+1)
---    | forStmt(_, _, _, b)         -> findAllScopes1(b, n+1)
---    | switchStmt(_, b)            -> findAllScopes1(b, n+1)
---    | labelStmt(_, s)             -> findAllScopes1(s, n)
---    | caseLabelStmt(_, s)         -> findAllScopes1(s, n)
---    | defaultLabelStmt(s)         -> findAllScopes1(s, n)
---    | caseLabelRangeStmt(_, _, s) -> findAllScopes1(s, n)
---    -- TODO: any reason functionDeclStmt should be handled here?
-----    | functionDeclStmt(d)    ->
---    | ifStmt(_, t, e)             ->
---        case findAllScopes1(t, n) of
---        | pair(scopes1, n1) -> mergeScopes(scopes1, findAllScopes1(e, n1))
---        end
---    -- need to have explicit case for cilk_returnStmt, otherwise it will try to
---    --  forward to returnStmt and run into problems with inherited attributes
---    | cilk_returnStmt(_)          -> pair([], n)
---    | cilk_syncStmt()             -> pair([], n)
---    | cilk_exitStmt(_)            -> pair([], n)
---    | cilkSpawnStmt(_, _, _, _)   -> pair([], n)
---    | cilkSpawnStmtNoEqOp(_, _)   -> pair([], n)
---    | _                           -> pair([], n)
---    end;
---}
---
---abstract production mergeScopes
---top::Pair<[StructItem] Integer> ::= scopes1::[StructItem] p::Pair<[StructItem] Integer>
---{
---  forwards to
---    case p of
---      -- FIXME: this is not implemented correctly
---      pair(scopes2, n) -> pair(scopes1 ++ scopes2, n)
---    end;
---}
---
 {- based on cilkc2c/transform.c:MakeArgsAndResultStruct()
 
    struct _cilk_foo_args {
@@ -425,6 +341,29 @@ Stmt ::= arg::ParameterDecl
         foldDeclarator([ declarator(n, mty, [], nothingInitializer()) ])
       )
     );
+}
+
+-- TODO: do this in a better way
+function restoreArgs
+Stmt ::= args::Parameters
+{
+  return
+    case args of
+    | consParameters(h, t) -> seqStmt(restoreArg(h), restoreArgs(t))
+    | nilParameters()      -> nullStmt()
+    end;
+}
+
+function restoreArg
+Stmt ::= arg::ParameterDecl
+{
+  local n :: Name =
+    case arg.paramname of
+    | just(n1) -> n1
+    | _        -> error("cilk function parameter must be named")
+    end;
+
+  return txtStmt(n.name ++ " = " ++ "_cilk_frame->scope0." ++ n.name ++ ";");
 }
 
 {- based on cilkc2c/transform.c:MakeImportDecl() -}
@@ -985,6 +924,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.functiondefs = [];
 
   local argDecls :: Stmt = makeArgDecls(args);
+  argDecls.env = top.env;
 --  body.scopeCountInh = 42;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
@@ -1003,6 +943,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
+      restoreArgs(args),
       body,
       -- TODO: restore variables
       txtStmt("/* TODO: restore variables */")

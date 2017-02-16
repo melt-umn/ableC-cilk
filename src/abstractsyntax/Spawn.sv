@@ -150,7 +150,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       beforeSpawnFast,
       pushFrame,
       exprStmt(call),
-      makeXPopFrame(ml),
+      makeXPopFrame(ml, false),
       afterSpawnFast
     ]);
 }
@@ -197,8 +197,15 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       txtStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
-  local recoveryStmt :: Stmt = txtStmt("if (0) {_cilk_sync" ++ toString(s.syncCount) ++ ":;}");
-
+  local recoveryStmt :: Stmt =
+    ifStmtNoElse(
+      mkIntConst(0, builtIn()),
+      foldStmt([
+        txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
+        restoreVariables(s.env)
+      ])
+    );
+    
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
@@ -213,8 +220,9 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       beforeSpawnSlow,
       pushFrame,
       exprStmt(call),
-      makeXPopFrame(nothingExpr()),
+      makeXPopFrame(ml, true),
       afterSpawnSlow,
+      saveVariables(s.env),
       recoveryStmt,
       atThreadBoundary
     ]);
@@ -245,7 +253,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
   }
 -}
 abstract production makeXPopFrame
-top::Stmt ::= ml::MaybeExpr
+top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
   local l :: Expr =
     case ml of
@@ -332,7 +340,10 @@ top::Stmt ::= ml::MaybeExpr
   --  _cilk_frame->dummy_return otherwise
   local retStmt :: Stmt =
     case ml of
-    | justExpr(_)   -> txtStmt("return 0;")
+    | justExpr(_)   ->
+        if isSlow
+        then txtStmt("return;")
+        else txtStmt("return 0;")
     | nothingExpr() -> txtStmt("return;")
     end;
 
@@ -354,11 +365,13 @@ top::Stmt ::= ml::MaybeExpr
     );
 
   forwards to
-    foldStmt([
-      txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */"),
-      mTmpDecl,
-      xPopFrameResult
-    ]);
+    compoundStmt(
+      foldStmt([
+        txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */"),
+        mTmpDecl,
+        xPopFrameResult
+      ])
+    );
 }
 
 -- _cilk_frame->header.entry = syncCount;
@@ -388,7 +401,6 @@ top::Stmt ::= syncCount::Integer
     );
 }
 
--- TODO: implement saveVariables
 function saveVariables
 Stmt ::= env::Decorated Env
 {

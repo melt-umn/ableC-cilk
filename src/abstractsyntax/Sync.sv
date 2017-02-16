@@ -55,8 +55,6 @@ s::Stmt ::=
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
 
-  -- TODO: save live, dirty variables
-
   -- expand CILK2C_AFTER_SYNC_SLOW() macro
   local afterSyncSlow :: Stmt =
     foldStmt([
@@ -64,7 +62,6 @@ s::Stmt ::=
       txtStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
-  -- TODO: restore variables
   local syncLabel :: Stmt =
     -- note: expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
     txtStmt("if (Cilk_sync(_cilk_ws)) {return; _cilk_sync" ++ toString(s.syncCount) ++ ":;}");
@@ -81,9 +78,41 @@ s::Stmt ::=
     foldStmt([
       beforeSyncSlow,
       setHeaderEntry,
+      saveVariables(s.env),
       syncLabel,
+      restoreVariables(s.env),
       afterSyncSlow,
       atThreadBoundary
     ]);
+}
+
+function restoreVariables
+Stmt ::= env::Decorated Env
+{
+  local values :: [ValueItem] =
+    map (snd, foldr(append, [], map(tm:toList, take(length(env.values)-1, env.values))));
+  local decls :: [Decorated Declarator] = getDeclsFromValues(values);
+  return
+    foldStmt([
+      txtStmt("/* TODO: restore only live variables */"),
+      foldStmt(map(restoreDecl, decls))
+    ]);
+}
+
+function restoreDecl
+Stmt ::= d::Decorated Declarator
+{
+  return 
+    case d of
+    | declarator(n, _, _, _) ->
+        if n.name != "_cilk_frame"
+        then
+          txtStmt(n.name ++ " = " ++ "_cilk_frame->scope" ++
+            toString(d.scopeCountInh) ++ "." ++ n.name ++ ";")
+        else
+          nullStmt()
+    | _                         ->
+        txtStmt("/* unsupported declarator found, will not save */")
+    end;
 }
 
