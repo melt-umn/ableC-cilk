@@ -14,54 +14,7 @@ top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]  bty:
 {
   body.syncCountInh = 0;
   body.scopeCountInh = 0;
-
---  top.scopes =
---    case mty of
---    | functionTypeExprWithArgs(_, args, _) ->
---        consStructItem(
---          structItem(
---            [],
---            structTypeExpr(
---              [],
---              structDecl([], nothingName(), makeArgFields(args), location=builtIn())
---            ),
---            foldStructDeclarator([
---              structField(name("scope0", location=builtIn()), baseTypeExpr(), [])
---            ])
---          ),
---          body.scopes
---        )
---    | functionTypeExprWithoutArgs(_, _)    -> body.scopes
---    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
---    end;
 }
-
---aspect production nestedFunctionDecl
---top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]  bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name  attrs::[Attribute]  decls::Decls  body::Stmt
---{
---  body.syncCountInh = 0;
---  body.scopeCountInh = 242;
---
---  top.scopes =
---    case mty of
---    | functionTypeExprWithArgs(_, args, _) ->
---        consStructItem(
---          structItem(
---            [],
---            structTypeExpr(
---              [],
---              structDecl([], nothingName(), makeArgFields(args), location=builtIn())
---            ),
---            foldStructDeclarator([
---              structField(name("scope" ++ top.scopeCount, location=builtIn()), baseTypeExpr(), [])
---            ])
---          ),
---          body.scopes
---        )
---    | functionTypeExprWithoutArgs(_, _)    -> body.scopes
---    | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
---    end;
---}
 
 aspect default production
 top::Stmt ::=

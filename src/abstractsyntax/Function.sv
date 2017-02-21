@@ -29,9 +29,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
 
---  body.scopesInh = nilStructItem();
---  body.scopeCountInh = 42;
-
   local cilkElision :: Decl =
     functionDeclaration(
       functionDecl( storage, fnquals, bty, mty, fname, attrs, dcls, body) ) ;
@@ -60,7 +57,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 -- pulling things out defs in the places that they are added to the env.
   newDecls <- [frameStruct];
   local frameStruct :: Decl = makeFrame(newName, args, body);
---  frameStruct.scopeCountInh = 42;
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
@@ -768,7 +764,6 @@ top::Stmt ::= body::Stmt newName::Name
         addEnv(
           [
             miscDef(cilk_in_fast_clone_id, emptyMiscItem())
---            miscDef(cilk_new_proc_name, stringMiscItem(newName.name))
           ],
           top.env
         );
@@ -925,7 +920,6 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
---  body.scopeCountInh = 42;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
@@ -944,9 +938,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       startThreadSlow,
       switchHeaderEntry,
       restoreArgs(args),
-      body,
-      -- TODO: restore variables
-      txtStmt("/* TODO: restore variables */")
+      body
     ])
   with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
 }
@@ -1002,8 +994,19 @@ top::Decl ::= fname::Name bty::BaseTypeExpr
               init(exprInitializer(mkIntConst(0, builtIn())))
             ])
           )
+        ),
+        -- TODO: scope sigs will go here, but they need to be defined from spawn/sync
+        init(
+          objectInitializer(
+            foldInit([
+              init(exprInitializer(mkIntConst(0, builtIn()))),
+              init(exprInitializer(mkIntConst(0, builtIn()))),
+              init(exprInitializer(mkIntConst(0, builtIn()))),
+              init(exprInitializer(mkIntConst(0, builtIn()))),
+              init(exprInitializer(mkIntConst(0, builtIn())))
+            ])
+          )
         )
-      -- TODO: scope sigs will go here, but they need to be defined from spawn/sync
       ])
     );
 
@@ -1054,11 +1057,6 @@ Decl ::= s::String
 """
     );
 }
-
---abstract production stringMiscItem
---top::MiscItem ::= s::String
---{
---}
 
 -- New location for expressions which don't have real locations
 abstract production builtIn

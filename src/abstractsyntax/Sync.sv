@@ -55,16 +55,28 @@ s::Stmt ::=
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
 
+  local recoveryStmt :: Stmt =
+    ifStmtNoElse(
+      -- expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
+      directCallExpr(
+        name("Cilk_sync", location=builtIn()),
+        foldExpr([
+          declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn())
+        ]),
+        location=builtIn()
+      ),
+      foldStmt([
+        txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
+        restoreVariables(s.env)
+      ])
+    );
+    
   -- expand CILK2C_AFTER_SYNC_SLOW() macro
   local afterSyncSlow :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_AFTER_SYNC_SLOW() macro */"),
       txtStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
-
-  local syncLabel :: Stmt =
-    -- note: expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
-    txtStmt("if (Cilk_sync(_cilk_ws)) {return; _cilk_sync" ++ toString(s.syncCount) ++ ":;}");
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
@@ -79,8 +91,7 @@ s::Stmt ::=
       beforeSyncSlow,
       setHeaderEntry,
       saveVariables(s.env),
-      syncLabel,
-      restoreVariables(s.env),
+      recoveryStmt,
       afterSyncSlow,
       atThreadBoundary
     ]);

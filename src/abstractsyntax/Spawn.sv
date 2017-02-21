@@ -126,6 +126,9 @@ s::Stmt ::= f::Expr args::Exprs
 abstract production cilk_fastCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr
 {
+  -- reserve a sync number
+  s.syncCount = s.syncCountInh + 1;
+
   local beforeSpawnFast :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_BEFORE_SPAWN_FAST() macro */"),
