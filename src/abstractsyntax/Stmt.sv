@@ -16,6 +16,9 @@ synthesized attribute scopes    :: StructItemList occurs on Stmt, Parameters;
 autocopy    attribute cilkFrameVarsGlobal :: [Pair<Name Integer>] occurs on Stmt;
 synthesized attribute cilkFrameVarsLocal  :: [Pair<Name Integer>] occurs on Stmt, Decl, Declarators, Declarator, Parameters;
 
+autocopy    attribute cilkLinksInh :: InitList occurs on Stmt;
+synthesized attribute cilkLinks    :: InitList occurs on Stmt;
+
 aspect production functionDecl
 top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
                       bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name
@@ -33,6 +36,7 @@ top::Stmt ::=
   top.scopeCount = top.scopeCountInh;
   top.scopes = top.scopesInh;
   top.cilkFrameVarsLocal = [];
+  top.cilkLinks = nilInit();
 }
 
 aspect production seqStmt
@@ -48,6 +52,9 @@ top::Stmt ::= h::Stmt  t::Stmt
   top.scopes = t.scopes;
 
   top.cilkFrameVarsLocal = h.cilkFrameVarsLocal ++ t.cilkFrameVarsLocal;
+
+  t.cilkLinksInh = h.cilkLinks;
+  top.cilkLinks = t.cilkLinks;
 }
 
 aspect production compoundStmt
@@ -58,6 +65,7 @@ top::Stmt ::= s::Stmt
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
+  top.cilkLinks = s.cilkLinks;
 }
 
 aspect production declStmt
@@ -107,16 +115,10 @@ top::Stmt ::= c::Expr t::Stmt e::Stmt
   e.scopesInh = t.scopes;
   top.scopes = e.scopes;
   top.cilkFrameVarsLocal = t.cilkFrameVarsLocal ++ e.cilkFrameVarsLocal;
-}
 
---aspect production ifStmtNoElse
---top::Stmt ::= c::Expr t::Stmt
---{
---  top.syncCount = t.syncCount;
---  t.scopeCountInh = top.scopeCountInh + 1;
---  top.scopeCount = t.scopeCount;
---  top.scopes = t.scopes;
---}
+  e.cilkLinksInh = t.cilkLinks;
+  top.cilkLinks = e.cilkLinks;
+}
 
 aspect production whileStmt
 top::Stmt ::= e::Expr b::Stmt
@@ -126,6 +128,7 @@ top::Stmt ::= e::Expr b::Stmt
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
+  top.cilkLinks = b.cilkLinks;
 }
 
 aspect production doStmt
@@ -136,6 +139,7 @@ top::Stmt ::= b::Stmt e::Expr
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
+  top.cilkLinks = b.cilkLinks;
 }
 
 aspect production forStmt
@@ -146,6 +150,7 @@ top::Stmt ::= i::MaybeExpr c::MaybeExpr s::MaybeExpr b::Stmt
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
+  top.cilkLinks = b.cilkLinks;
 }
 
 aspect production forDeclStmt
@@ -185,6 +190,7 @@ top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
     end;
 
   top.cilkFrameVarsLocal = i.cilkFrameVarsLocal ++ b.cilkFrameVarsLocal;
+  top.cilkLinks = b.cilkLinks;
 }
 
 aspect production switchStmt
@@ -195,6 +201,7 @@ top::Stmt ::= e::Expr b::Stmt
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
+  top.cilkLinks = b.cilkLinks;
 }
 
 aspect production labelStmt
@@ -204,6 +211,7 @@ top::Stmt ::= l::Name s::Stmt
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
+  top.cilkLinks = s.cilkLinks;
 }
 
 aspect production caseLabelStmt
@@ -213,6 +221,7 @@ top::Stmt ::= v::Expr s::Stmt
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
+  top.cilkLinks = s.cilkLinks;
 }
 
 aspect production defaultLabelStmt
@@ -222,6 +231,7 @@ top::Stmt ::= s::Stmt
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
+  top.cilkLinks = s.cilkLinks;
 }
 
 aspect production caseLabelRangeStmt
@@ -231,5 +241,6 @@ top::Stmt ::= l::Expr u::Expr s::Stmt
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
+  top.cilkLinks = s.cilkLinks;
 }
 

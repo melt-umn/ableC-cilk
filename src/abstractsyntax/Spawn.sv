@@ -162,7 +162,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
-  -- TODO: assign to tmp, not l (is this done by RestoreVariables()?)
+  s.cilkLinks =
+    consInit(
+      init(objectInitializer(
+        foldInit([
+          init(exprInitializer(mkIntConst(0, builtIn()))),
+          init(exprInitializer(mkIntConst(0, builtIn()))),
+          init(exprInitializer(mkIntConst(0, builtIn()))),
+          init(exprInitializer(mkIntConst(0, builtIn()))),
+          init(exprInitializer(mkIntConst(0, builtIn())))
+        ])
+      )),
+      s.cilkLinksInh
+    );
+
   -- l = callF();
   local assignExpr :: Expr =
     binaryOpExpr(
