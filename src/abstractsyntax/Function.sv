@@ -57,6 +57,10 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 -- pulling things out defs in the places that they are added to the env.
   newDecls <- [frameStruct];
   local frameStruct :: Decl = makeFrame(newName, args, body);
+--  body.scopesInh = args.scopes;
+--  body.scopeCountInh = 0;
+--  body.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ body.cilkFrameVarsLocal;
+--  body.cilkFrameVarsGlobal = [];
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
@@ -75,6 +79,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local slowCloneBody :: Stmt = transformSlowClone(body, newName, args);
   newDecls <- [slowCloneDecl];
 
+--  slowCloneBody.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ body.cilkFrameVarsLocal;
+--  slowCloneBody.cilkFrameVarsGlobal = [];
+
 ---- Proc Info --------------------------------------------------
   local linkage :: Decl = makeLinkage(newName, bty);
   newDecls <- [linkage];
@@ -83,6 +90,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local fastCloneDecl :: Decl = fastClone(bty, mty, newName, dcls, fastCloneBody);
   local fastCloneBody :: Stmt = transformFastClone(body, newName);
   newDecls <- [fastCloneDecl];
+
+--  fastCloneBody.cilkFrameVarsGlobal = body.cilkFrameVarsGlobal;
+--  fastCloneBody.cilkFrameVarsGlobal = [];
 
 -- Import Function --------------------------------------------------
   newDecls <- [ importDecl ];
@@ -173,44 +183,25 @@ global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
      { ... scope <n> vars ... } scope<n>;
    };
 -}
-abstract production makeFrame
-top::Decl ::= newName::Name args::Parameters body::Stmt
+function makeFrame
+Decl ::= newName::Name args::Parameters body::Stmt
 {
-  body.scopesInh = nilStructItem();
+  body.scopesInh = args.scopes;
   body.scopeCountInh = 0;
 
-  local frameFields :: StructItemList =
-    consStructItem(
-      structItem(
-        [],
-        typedefTypeExpr([], name("CilkStackFrame", location=builtIn())),
-        foldStructDeclarator([
-          structField(name("header", location=builtIn()), baseTypeExpr(), [])
-        ])
-      ),
-      -- only add scope0 if args aren't void
-      case args of
-      | consParameters(h, t) -> consStructItem(scope0, body.scopes)
-      | nilParameters()      -> body.scopes
-      end
+  -- TODO: if return type is not an arithmetic type, put it in frame
+  local frameFields :: StructItemList = consStructItem(header, body.scopes);
+
+  local header :: StructItem =
+    structItem(
+      [],
+      typedefTypeExpr([], name("CilkStackFrame", location=builtIn())),
+      foldStructDeclarator([
+        structField(name("header", location=builtIn()), baseTypeExpr(), [])
+      ])
     );
 
---  local scopes :: StructItemList = consStructItem(scope0, findAllScopes(body));
-
-  -- TODO: if return type is not an arithmetic type, put it in frame
-  local scope0 :: StructItem =
-      structItem(
-        [],
-        structTypeExpr(
-          [],
-          structDecl([], nothingName(), makeArgFields(args), location=builtIn())
-        ),
-        foldStructDeclarator([
-          structField(name("scope0", location=builtIn()), baseTypeExpr(), [])
-        ])
-      );
-
-  forwards to
+  return
     typeExprDecl([],
       structTypeExpr(
         [],
@@ -339,27 +330,33 @@ Stmt ::= arg::ParameterDecl
     );
 }
 
--- TODO: do this in a better way
-function restoreArgs
-Stmt ::= args::Parameters
+function restoreVariables
+Stmt ::= cilkFrameVars::[Pair<Name Integer>]
 {
-  return
-    case args of
-    | consParameters(h, t) -> seqStmt(restoreArg(h), restoreArgs(t))
-    | nilParameters()      -> nullStmt()
-    end;
+  return foldStmt(map(restoreVariable, cilkFrameVars));
 }
 
-function restoreArg
-Stmt ::= arg::ParameterDecl
+function restoreVariable
+Stmt ::= cilkFrameVar::Pair<Name Integer>
 {
-  local n :: Name =
-    case arg.paramname of
-    | just(n1) -> n1
-    | _        -> error("cilk function parameter must be named")
-    end;
+  local n :: Name = fst(cilkFrameVar);
+  local scope :: Integer = snd(cilkFrameVar);
+  return txtStmt(n.name ++ " = " ++ "_cilk_frame->scope" ++ toString(scope) ++ "." ++ n.name ++ ";");
+}
 
-  return txtStmt(n.name ++ " = " ++ "_cilk_frame->scope0." ++ n.name ++ ";");
+function saveVariables
+Stmt ::= cilkFrameVars::[Pair<Name Integer>]
+{
+  return foldStmt(map(saveVariable, cilkFrameVars));
+}
+
+function saveVariable
+Stmt ::= cilkFrameVar::Pair<Name Integer>
+{
+  local n :: Name = fst(cilkFrameVar);
+  local scope :: Integer = snd(cilkFrameVar);
+  return txtStmt("_cilk_frame->scope" ++ toString(scope) ++ "." ++ n.name ++ " = "
+           ++ n.name ++ ";");
 }
 
 {- based on cilkc2c/transform.c:MakeImportDecl() -}
@@ -754,6 +751,8 @@ top::TypeModifierExpr ::= mty::TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name
 {
+--  top.cilkFrameVarsLocal = [];
+
   forwards to
     foldStmt([
       addFastStuff(newName),
@@ -773,6 +772,8 @@ top::Stmt ::= body::Stmt newName::Name
 abstract production addFastStuff
 top::Stmt ::= newName::Name
 {
+  top.cilkFrameVarsLocal = [];
+
   local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtIn());
   local sigName :: Name = name("_cilk_" ++ newName.name ++ "_sig", location=builtIn());
   local frameName :: Name = name("_cilk_frame", location=builtIn());
@@ -937,7 +938,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
-      restoreArgs(args),
+      restoreVariables(args.cilkFrameVarsLocal),
       body
     ])
   with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;

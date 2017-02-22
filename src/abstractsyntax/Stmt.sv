@@ -1,19 +1,29 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax;
 
-autocopy attribute syncCountInh :: Integer occurs on Stmt;
-synthesized attribute syncCount :: Integer occurs on Stmt;
+-- keep track of how many times we sync in order to generate entry labels
+autocopy    attribute syncCountInh :: Integer occurs on Stmt;
+synthesized attribute syncCount    :: Integer occurs on Stmt;
 
-autocopy attribute scopeCountInh :: Integer occurs on Stmt, Decl, Decls, Declarators, Declarator;
-synthesized attribute scopeCount :: Integer occurs on Stmt;
+-- number each scope, match with scope structs in cilk frame
+autocopy    attribute scopeCountInh :: Integer occurs on Stmt, Decl, Decls, Declarators, Declarator;
+synthesized attribute scopeCount    :: Integer occurs on Stmt;
 
-autocopy attribute scopesInh :: StructItemList occurs on Stmt;
-synthesized attribute scopes :: StructItemList occurs on Stmt;
+-- StructItemList to be put into cilk frame
+autocopy    attribute scopesInh :: StructItemList occurs on Stmt;
+synthesized attribute scopes    :: StructItemList occurs on Stmt, Parameters;
+
+-- a list of all names and scopes of variables in cilk frame
+autocopy    attribute cilkFrameVarsGlobal :: [Pair<Name Integer>] occurs on Stmt;
+synthesized attribute cilkFrameVarsLocal  :: [Pair<Name Integer>] occurs on Stmt, Decl, Declarators, Declarator, Parameters;
 
 aspect production functionDecl
-top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]  bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name  attrs::[Attribute]  decls::Decls  body::Stmt
+top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
+                      bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name
+                      attrs::[Attribute]  decls::Decls  body::Stmt
 {
   body.syncCountInh = 0;
   body.scopeCountInh = 0;
+  body.cilkFrameVarsGlobal = body.cilkFrameVarsLocal;
 }
 
 aspect default production
@@ -22,6 +32,7 @@ top::Stmt ::=
   top.syncCount = top.syncCountInh;
   top.scopeCount = top.scopeCountInh;
   top.scopes = top.scopesInh;
+  top.cilkFrameVarsLocal = [];
 }
 
 aspect production seqStmt
@@ -35,6 +46,8 @@ top::Stmt ::= h::Stmt  t::Stmt
 
   t.scopesInh = h.scopes;
   top.scopes = t.scopes;
+
+  top.cilkFrameVarsLocal = h.cilkFrameVarsLocal ++ t.cilkFrameVarsLocal;
 }
 
 aspect production compoundStmt
@@ -44,12 +57,14 @@ top::Stmt ::= s::Stmt
   s.scopeCountInh = top.scopeCountInh + 1;
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
+  top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
 }
 
 aspect production declStmt
 top::Stmt ::= d::Decl
 {
   top.scopes =
+    -- TODO: use syn attribute on Decl
     case d of
     | variableDecls(_, attrs, ty, dcls) ->
         consStructItem(
@@ -61,7 +76,7 @@ top::Stmt ::= d::Decl
                 [],
                 nothingName(),
                 foldStructItem([
-                  structItem(attrs, ty, makeStructDecls(dcls))
+                  structItem(attrs, ty, dcls.cilkFrameDecls)
                 ]),
                 location=builtIn()
               )
@@ -77,6 +92,8 @@ top::Stmt ::= d::Decl
           top.scopesInh
         )
     end;
+
+  top.cilkFrameVarsLocal = d.cilkFrameVarsLocal;
 }
 
 aspect production ifStmt
@@ -89,16 +106,17 @@ top::Stmt ::= c::Expr t::Stmt e::Stmt
   top.scopeCount = e.scopeCount;
   e.scopesInh = t.scopes;
   top.scopes = e.scopes;
+  top.cilkFrameVarsLocal = t.cilkFrameVarsLocal ++ e.cilkFrameVarsLocal;
 }
 
-aspect production ifStmtNoElse
-top::Stmt ::= c::Expr t::Stmt
-{
-  top.syncCount = t.syncCount;
-  t.scopeCountInh = top.scopeCountInh + 1;
-  top.scopeCount = t.scopeCount;
-  top.scopes = t.scopes;
-}
+--aspect production ifStmtNoElse
+--top::Stmt ::= c::Expr t::Stmt
+--{
+--  top.syncCount = t.syncCount;
+--  t.scopeCountInh = top.scopeCountInh + 1;
+--  top.scopeCount = t.scopeCount;
+--  top.scopes = t.scopes;
+--}
 
 aspect production whileStmt
 top::Stmt ::= e::Expr b::Stmt
@@ -107,6 +125,7 @@ top::Stmt ::= e::Expr b::Stmt
   b.scopeCountInh = top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
+  top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
 }
 
 aspect production doStmt
@@ -116,6 +135,7 @@ top::Stmt ::= b::Stmt e::Expr
   b.scopeCountInh = top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
+  top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
 }
 
 aspect production forStmt
@@ -125,6 +145,7 @@ top::Stmt ::= i::MaybeExpr c::MaybeExpr s::MaybeExpr b::Stmt
   b.scopeCountInh = top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
+  top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
 }
 
 aspect production forDeclStmt
@@ -146,7 +167,7 @@ top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
                 [],
                 nothingName(),
                 foldStructItem([
-                  structItem(attrs, ty, makeStructDecls(dcls))
+                  structItem(attrs, ty, dcls.cilkFrameDecls)
                 ]),
                 location=builtIn()
               )
@@ -162,6 +183,8 @@ top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
           top.scopesInh
         )
     end;
+
+  top.cilkFrameVarsLocal = i.cilkFrameVarsLocal ++ b.cilkFrameVarsLocal;
 }
 
 aspect production switchStmt
@@ -171,6 +194,7 @@ top::Stmt ::= e::Expr b::Stmt
   b.scopeCountInh = top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
   top.scopes = b.scopes;
+  top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
 }
 
 aspect production labelStmt
@@ -179,6 +203,7 @@ top::Stmt ::= l::Name s::Stmt
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
+  top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
 }
 
 aspect production caseLabelStmt
@@ -187,6 +212,7 @@ top::Stmt ::= v::Expr s::Stmt
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
+  top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
 }
 
 aspect production defaultLabelStmt
@@ -195,6 +221,7 @@ top::Stmt ::= s::Stmt
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
+  top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
 }
 
 aspect production caseLabelRangeStmt
@@ -203,32 +230,6 @@ top::Stmt ::= l::Expr u::Expr s::Stmt
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
   top.scopes = s.scopes;
-}
-
-aspect production root
-top::Root ::= d::Decls
-{
-  d.scopeCountInh = -1;
-}
-
-function makeStructDecls
-StructDeclarators ::= dcls::Declarators
-{
-  return
-    case dcls of
-    | consDeclarator(h, t) ->
-        case h of
-        | declarator(n, ty, attrs, _) ->
-            consStructDeclarator(
-              structField(n, ty, attrs),
-              makeStructDecls(t)
-            )
-        | errorDeclarator(msg) ->
-            -- TODO: improve this message
-            error("errorDeclarator found")
-        end
-    | nilDeclarator()      ->
-        nilStructDeclarator()
-    end;
+  top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
 }
 

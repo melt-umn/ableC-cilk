@@ -32,6 +32,7 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_fastCloneReturn
 r::Stmt ::= e::MaybeExpr
 {
+  r.cilkFrameVarsLocal = [];
   local tempInt::Integer = genInt();
 
   -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
@@ -76,6 +77,8 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_slowCloneReturn
 r::Stmt ::= me::MaybeExpr
 {
+  r.cilkFrameVarsLocal = [];
+
   local e :: Expr =
     case me of
       justExpr(e1)  -> e1

@@ -16,6 +16,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   s.scopeCount = s.scopeCountInh;
   s.scopes = s.scopesInh;
+  s.cilkFrameVarsLocal = [];
 
   -- TODO: transform args
 
@@ -49,7 +50,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
-      saveVariables(s.env),
+      saveVariables(s.cilkFrameVarsGlobal),
       spawnStmt
     ]);
 }
@@ -117,7 +118,7 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
-        saveVariables(s.env),
+        saveVariables(s.cilkFrameVarsGlobal),
         spawnStmt
       ])
     );
@@ -205,7 +206,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       mkIntConst(0, builtIn()),
       foldStmt([
         txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
-        restoreVariables(s.env)
+        restoreVariables(s.cilkFrameVarsGlobal)
       ])
     );
     
@@ -225,7 +226,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       exprStmt(call),
       makeXPopFrame(ml, true),
       afterSpawnSlow,
-      saveVariables(s.env),
+      saveVariables(s.cilkFrameVarsGlobal),
       recoveryStmt,
       atThreadBoundary
     ]);
@@ -258,6 +259,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
+  top.cilkFrameVarsLocal = [];
+
   local l :: Expr =
     case ml of
     | justExpr(l1)  -> l1
@@ -402,50 +405,6 @@ top::Stmt ::= syncCount::Integer
         location=builtIn()
       )
     );
-}
-
-function saveVariables
-Stmt ::= env::Decorated Env
-{
-  local values :: [ValueItem] =
-    map (snd, foldr(append, [], map(tm:toList, take(length(env.values)-1, env.values))));
-  local decls :: [Decorated Declarator] = getDeclsFromValues(values);
-  return
-    foldStmt([
-      txtStmt("/* TODO: save only live, dirty variables */"),
-      foldStmt(map(saveDecl, decls))
-    ]);
-}
-
-function getDeclsFromValues
-[Decorated Declarator] ::= values::[ValueItem]
-{
-  return
-    case values of
-    | v :: vs ->
-        case v of
-        | declaratorValueItem(s) -> s :: getDeclsFromValues(vs)
-        | _                      -> getDeclsFromValues(vs)
-        end
-    | []         -> []
-    end;
-}
-
-function saveDecl
-Stmt ::= d::Decorated Declarator
-{
-  return 
-    case d of
-    | declarator(n, _, _, _) ->
-        if n.name != "_cilk_frame"
-        then
-          txtStmt("_cilk_frame->scope" ++ toString(d.scopeCountInh) ++ "." ++
-            n.name ++ " = " ++ n.name ++ ";")
-        else
-          nullStmt()
-    | _                         ->
-        txtStmt("/* unsupported declarator found, will not save */")
-    end;
 }
 
 -- return first found item; otherwise error

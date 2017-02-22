@@ -15,6 +15,7 @@ s::Stmt ::=
 
   s.scopeCount = s.scopeCountInh;
   s.scopes = s.scopesInh;
+  s.cilkFrameVarsLocal = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
@@ -66,8 +67,8 @@ s::Stmt ::=
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
-        restoreVariables(s.env)
+        txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":"),
+        restoreVariables(s.cilkFrameVarsGlobal)
       ])
     );
     
@@ -90,40 +91,10 @@ s::Stmt ::=
     foldStmt([
       beforeSyncSlow,
       setHeaderEntry,
-      saveVariables(s.env),
+      saveVariables(s.cilkFrameVarsGlobal),
       recoveryStmt,
       afterSyncSlow,
       atThreadBoundary
     ]);
-}
-
-function restoreVariables
-Stmt ::= env::Decorated Env
-{
-  local values :: [ValueItem] =
-    map (snd, foldr(append, [], map(tm:toList, take(length(env.values)-1, env.values))));
-  local decls :: [Decorated Declarator] = getDeclsFromValues(values);
-  return
-    foldStmt([
-      txtStmt("/* TODO: restore only live variables */"),
-      foldStmt(map(restoreDecl, decls))
-    ]);
-}
-
-function restoreDecl
-Stmt ::= d::Decorated Declarator
-{
-  return 
-    case d of
-    | declarator(n, _, _, _) ->
-        if n.name != "_cilk_frame"
-        then
-          txtStmt(n.name ++ " = " ++ "_cilk_frame->scope" ++
-            toString(d.scopeCountInh) ++ "." ++ n.name ++ ";")
-        else
-          nullStmt()
-    | _                         ->
-        txtStmt("/* unsupported declarator found, will not save */")
-    end;
 }
 
