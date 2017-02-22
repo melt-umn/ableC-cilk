@@ -759,21 +759,31 @@ top::TypeModifierExpr ::= mty::TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
-  top.cilkFrameVarsLocal = fwd.cilkFrameVarsLocal ++ args.cilkFrameVarsLocal;
+  top.cilkFrameVarsLocal = fastClone.cilkFrameVarsLocal ++ args.cilkFrameVarsLocal;
+  top.globalDecls := [];
+  top.defs = [];
+  top.freeVariables = [];
+  top.functiondefs = [];
 
-  local fwd :: Stmt =
+  local fastClone :: Stmt =
     foldStmt([
       addFastStuff(newName),
       body
     ]);
-  fwd.scopeCountInh = top.scopeCountInh;
-  fwd.env =
+
+  fastClone.scopeCountInh = top.scopeCountInh;
+  fastClone.env =
     addEnv(
       [
         miscDef(cilk_in_fast_clone_id, emptyMiscItem())
       ],
       top.env
     );
+
+  local fwd :: Stmt =
+    if   frameContainsShadow(top.cilkFrameVarsLocal)
+    then warnStmt([err(builtIn(), "shadowing variable names is currently not supported")])
+    else fastClone;
 
   forwards to
     fwd
@@ -880,6 +890,22 @@ top::Stmt ::= newName::Name
       startThreadFastCp,
       eventNewThreadMaybe
     ]);
+}
+
+function frameContainsShadow
+Boolean ::= cilkFrameVars::[Pair<Name Integer>]
+{
+  return
+    if   null(cilkFrameVars)
+    then false
+    else containsBy(pairFstNameEq, head(cilkFrameVars), tail(cilkFrameVars))
+           || frameContainsShadow(tail(cilkFrameVars));
+}
+
+function pairFstNameEq
+Boolean ::= l::Pair<Name a> r::Pair<Name a>
+{
+  return fst(l).name == fst(r).name;
 }
 
 abstract production slowClone
