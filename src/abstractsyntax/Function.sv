@@ -88,7 +88,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Fast Clone --------------------------------------------------
   local fastCloneDecl :: Decl = fastClone(bty, mty, newName, dcls, fastCloneBody);
-  local fastCloneBody :: Stmt = transformFastClone(body, newName);
+  local fastCloneBody :: Stmt = transformFastClone(body, newName, args);
   newDecls <- [fastCloneDecl];
 
 --  fastCloneBody.cilkFrameVarsGlobal = body.cilkFrameVarsGlobal;
@@ -749,15 +749,26 @@ top::TypeModifierExpr ::= mty::TypeModifierExpr
 }
 
 abstract production transformFastClone
-top::Stmt ::= body::Stmt newName::Name
+top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
---  top.cilkFrameVarsLocal = [];
+  top.cilkFrameVarsLocal = fwd.cilkFrameVarsLocal ++ args.cilkFrameVarsLocal;
 
-  forwards to
+  local fwd :: Stmt =
     foldStmt([
       addFastStuff(newName),
       body
-    ])
+    ]);
+  fwd.scopeCountInh = top.scopeCountInh;
+  fwd.env =
+    addEnv(
+      [
+        miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+      ],
+      top.env
+    );
+
+  forwards to
+    fwd
     with {
       env =
         addEnv(
