@@ -333,7 +333,11 @@ Stmt ::= arg::ParameterDecl
 function restoreVariables
 Stmt ::= cilkFrameVars::[Pair<Name Integer>]
 {
-  return foldStmt(map(restoreVariable, cilkFrameVars));
+  return
+    foldStmt([
+      txtStmt("/* TODO: restore only live variables */"),
+      foldStmt(map(restoreVariable, cilkFrameVars))
+    ]);
 }
 
 function restoreVariable
@@ -347,7 +351,11 @@ Stmt ::= cilkFrameVar::Pair<Name Integer>
 function saveVariables
 Stmt ::= cilkFrameVars::[Pair<Name Integer>]
 {
-  return foldStmt(map(saveVariable, cilkFrameVars));
+  return
+    foldStmt([
+      txtStmt("/* TODO: save only live, dirty variables */"),
+      foldStmt(map(saveVariable, cilkFrameVars))
+    ]);
 }
 
 function saveVariable

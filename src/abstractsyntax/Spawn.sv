@@ -224,7 +224,16 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       beforeSpawnSlow,
       pushFrame,
       exprStmt(call),
+
+      -- TODO: this save/restore was not necessary in cilk2c because certain
+      --   variable references were replaced with references to the cilk frame,
+      --   in addition to the TODO of only saving/restoring live/dirty
+      --   variables, we should look into what exactly needs to be
+      --   saved/restored here
+      saveVariables(s.cilkFrameVarsGlobal),
       makeXPopFrame(ml, true),
+      restoreVariables(s.cilkFrameVarsGlobal),
+
       afterSpawnSlow,
       saveVariables(s.cilkFrameVarsGlobal),
       recoveryStmt,
