@@ -85,7 +85,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   slowCloneBody.scopeCountInh = 0;
 --  slowCloneBody.cilkFrameVarsGlobal = [];
   slowCloneBody.cilkLinksInh = [];
-  slowCloneBody.returnType = top.returnType;
+  slowCloneBody.returnType = nothing();
   slowCloneBody.cilkProcName = newName;
 
 ---- Proc Info --------------------------------------------------
@@ -785,6 +785,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       ],
       top.env
     );
+  fastClone.returnType = body.returnType;
 
   local fwd :: Stmt =
     if   frameContainsShadow(top.cilkFrameVarsLocal)
