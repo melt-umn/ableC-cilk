@@ -79,11 +79,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local slowCloneBody :: Stmt = transformSlowClone(body, newName, args);
   newDecls <- [slowCloneDecl];
 
---  slowCloneBody.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ body.cilkFrameVarsLocal;
+  slowCloneBody.env = top.env;
+--  slowCloneBody.env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env);
+  slowCloneBody.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ slowCloneBody.cilkFrameVarsLocal;
+  slowCloneBody.scopeCountInh = 0;
 --  slowCloneBody.cilkFrameVarsGlobal = [];
+  slowCloneBody.cilkLinksInh = [];
 
 ---- Proc Info --------------------------------------------------
-  local linkage :: Decl = makeLinkage(newName, bty);
+  local linkage :: Decl = makeLinkage(newName, bty, slowCloneBody.cilkLinks);
   newDecls <- [linkage];
 
 -- Fast Clone --------------------------------------------------
@@ -173,6 +177,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 global cilk_in_fast_clone_id::String = "cilk_in_fast_clone";
 global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
+global cilk_new_proc_name::String = "cilk_new_proc_name";
 
 {- based on cilkc2c/transform.c:MakeFrame()
 
@@ -986,7 +991,13 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       restoreVariables(args.cilkFrameVarsLocal),
       body
     ])
-  with { env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env); } ;
+  with {
+    env = addEnv([
+        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+        miscDef(cilk_new_proc_name, stringMiscItem(newName.name))
+      ],
+      top.env);
+  } ;
 }
 
 function makeSwitchHeaderCases
@@ -1001,7 +1012,7 @@ String ::= syncCount::Integer
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
 abstract production makeLinkage
-top::Decl ::= fname::Name bty::BaseTypeExpr
+top::Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init]
 {
   -- TODO: set to 0 if return void
   local sizeofRet :: Expr =
@@ -1029,31 +1040,33 @@ top::Decl ::= fname::Name bty::BaseTypeExpr
 
   local initSig :: Initializer =
     objectInitializer(
-      foldInit([
-        init(
-          objectInitializer(
-            foldInit([
-              init(exprInitializer(sizeofRet)),
-              init(exprInitializer(sizeofFrame)),
-              init(exprInitializer(slowClone)),
-              init(exprInitializer(mkIntConst(0, builtIn()))),
-              init(exprInitializer(mkIntConst(0, builtIn())))
-            ])
-          )
-        ),
-        -- TODO: scope sigs will go here, but they need to be defined from spawn/sync
-        init(
-          objectInitializer(
-            foldInit([
-              init(exprInitializer(mkIntConst(0, builtIn()))),
-              init(exprInitializer(mkIntConst(0, builtIn()))),
-              init(exprInitializer(mkIntConst(0, builtIn()))),
-              init(exprInitializer(mkIntConst(0, builtIn()))),
-              init(exprInitializer(mkIntConst(0, builtIn())))
-            ])
-          )
+      foldInit(
+        cons(
+          init(
+            objectInitializer(
+              foldInit([
+                init(exprInitializer(sizeofRet)),
+                init(exprInitializer(sizeofFrame)),
+                init(exprInitializer(slowClone)),
+                init(exprInitializer(mkIntConst(0, builtIn()))),
+                init(exprInitializer(mkIntConst(0, builtIn())))
+              ])
+            )
+          ),
+          bodyLinkage
         )
-      ])
+        ++ [init(
+            objectInitializer(
+              foldInit([
+                init(exprInitializer(mkIntConst(0, builtIn()))),
+                init(exprInitializer(mkIntConst(0, builtIn()))),
+                init(exprInitializer(mkIntConst(0, builtIn()))),
+                init(exprInitializer(mkIntConst(0, builtIn()))),
+                init(exprInitializer(mkIntConst(0, builtIn())))
+              ])
+            )
+           )]
+      )
     );
 
   forwards to
@@ -1109,5 +1122,10 @@ abstract production builtIn
 top::Location ::=
 {
   forwards to loc("Built In", 0, 0, 0, 0, 0, 0);
+}
+
+abstract production stringMiscItem
+top::MiscItem ::= s::String
+{
 }
 

@@ -16,8 +16,8 @@ synthesized attribute scopes    :: StructItemList occurs on Stmt, Parameters;
 autocopy    attribute cilkFrameVarsGlobal :: [Pair<Name Integer>] occurs on Stmt;
 synthesized attribute cilkFrameVarsLocal  :: [Pair<Name Integer>] occurs on Stmt, Decl, Declarators, Declarator, Parameters;
 
-autocopy    attribute cilkLinksInh :: InitList occurs on Stmt;
-synthesized attribute cilkLinks    :: InitList occurs on Stmt;
+autocopy    attribute cilkLinksInh :: [Init] occurs on Stmt;
+synthesized attribute cilkLinks    :: [Init] occurs on Stmt;
 
 aspect production functionDecl
 top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
@@ -36,7 +36,7 @@ top::Stmt ::=
   top.scopeCount = top.scopeCountInh;
   top.scopes = top.scopesInh;
   top.cilkFrameVarsLocal = [];
-  top.cilkLinks = nilInit();
+  top.cilkLinks = top.cilkLinksInh;
 }
 
 aspect production seqStmt

@@ -18,8 +18,6 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.scopes = s.scopesInh;
   s.cilkFrameVarsLocal = [];
 
-  -- TODO: transform args
-
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
@@ -85,8 +83,6 @@ s::Stmt ::= f::Expr args::Exprs
   s.functiondefs = [];
 
   -- TODO: refactor this to reuse cilkSpawnStmt code
-
-  -- TODO: transform args
 
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
@@ -163,11 +159,11 @@ abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
   s.cilkLinks =
-    consInit(
+    cons(
       init(objectInitializer(
         foldInit([
-          init(exprInitializer(mkIntConst(0, builtIn()))),
-          init(exprInitializer(mkIntConst(0, builtIn()))),
+          init(exprInitializer(sizeofL)),
+          init(exprInitializer(frameOffset)),
           init(exprInitializer(mkIntConst(0, builtIn()))),
           init(exprInitializer(mkIntConst(0, builtIn()))),
           init(exprInitializer(mkIntConst(0, builtIn())))
@@ -175,6 +171,110 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       )),
       s.cilkLinksInh
     );
+
+  local sizeofL :: Expr =
+    unaryExprOrTypeTraitExpr(
+      sizeofOp(location=builtIn()),
+      typeNameExpr(typeName(directTypeExpr(l.typerep), baseTypeExpr())),
+      location=builtIn()
+    );
+
+  local cilkProcName :: String = lookupMiscString(cilk_new_proc_name, s.env);
+
+  -- FIXME: l should be an id, not an Expr
+  local lName :: Name =
+    case l of
+    | declRefExpr(id) -> id
+    | _               -> error("spawn lhs must be an id")
+    end;
+  local lScopeNum :: Integer = findScopeNum(lName, s.cilkFrameVarsGlobal);
+  local scopeName :: Name = name("scope" ++ toString(lScopeNum), location=builtIn());
+  local frameName :: Name = name("_cilk_" ++ cilkProcName ++ "_frame", location=builtIn());
+
+  local frameTypeExpr :: BaseTypeExpr =
+    tagReferenceTypeExpr([], structSEU(), frameName);
+
+  -- expand CILK_OFFSETOF(struct _cilk_func_frame, scopeX.l) to
+  -- ((size_t) ((char *)&((struct _cilk_func_frame *) 0)->scopeX.l - (char *)((struct _cilk_func_frame *) 0)))
+  local frameOffset :: Expr =
+    txtExpr(
+      "((size_t) ((char *)&((struct " ++ frameName.name ++ " *) 0)->"
+        ++ scopeName.name ++ "." ++ lName.name ++ " - (char *)((struct " ++ frameName.name
+        ++ " *) 0)))",
+      location=builtIn()
+    );
+    -- TODO: don't use txtExpr for frameOffset
+--  local frameOffset :: Expr =
+--              -- ((struct _cilk_func_frame *) 0)->scopeX
+--              memberExpr(
+--                -- ((struct _cilk_func_frame *) 0)
+--                explicitCastExpr(
+--                  typeName(
+--                    frameTypeExpr,
+--                    pointerTypeExpr([], baseTypeExpr())
+--                  ),
+--                  mkIntConst(0, builtIn()),
+--                  location=builtIn()
+--                ),
+--                false, scopeName, location=builtIn()
+--              );
+
+
+--    explicitCastExpr(
+--      typeName(
+--        typedefTypeExpr([], name("size_t", location=builtIn())),
+--        baseTypeExpr()
+--      ),
+--      binaryOpExpr(
+--        -- ((char *) &((struct _cilk_func_frame *) 0)->scopeX.l)
+--        explicitCastExpr(
+--          typeName(
+--            directTypeExpr(builtinType([], signedType(charType()))),
+--            pointerTypeExpr([], baseTypeExpr())
+--          ),
+--          -- &((struct _cilk_func_frame *) 0)->scopeX.l
+--          mkAddressOf(
+--            -- ((struct _cilk_func_frame *) 0)->scopeX.l
+--            memberExpr(
+--              -- ((struct _cilk_func_frame *) 0)->scopeX
+--              memberExpr(
+--                -- ((struct _cilk_func_frame *) 0)
+--                explicitCastExpr(
+--                  typeName(
+--                    frameTypeExpr,
+--                    pointerTypeExpr([], baseTypeExpr())
+--                  ),
+--                  mkIntConst(0, builtIn()),
+--                  location=builtIn()
+--                ),
+--                true, scopeName, location=builtIn()
+--              ),
+--              false, lName, location=builtIn()), location=builtIn()
+--            ),
+--            builtIn()
+--          ),
+--          location=builtIn()
+--        ),
+--        numOp(subOp(location=builtIn()), location=builtIn()),
+--        explicitCastExpr(
+--          typeName(
+--            directTypeExpr(builtinType([], signedType(charType()))),
+--            pointerTypeExpr([], baseTypeExpr())
+--          ),
+--          explicitCastExpr(
+--            typeName(
+--              frameTypeExpr,
+--              pointerTypeExpr([], baseTypeExpr())
+--            ),
+--            mkIntConst(0, builtIn()),
+--            location=builtIn()
+--          ),
+--          location=builtIn()
+--        ),
+--        location=builtIn()
+--      ),
+--      location=builtIn()
+--    );
 
   -- l = callF();
   local assignExpr :: Expr =
@@ -430,19 +530,30 @@ top::Stmt ::= syncCount::Integer
 }
 
 -- return first found item; otherwise error
---function lookupMiscString
---String ::= n::String  e::Decorated Env
---{
---  local foundItems :: [MiscItem] = lookupMisc(n, e);
---  local foundItem :: MiscItem =
---    if   null(foundItems)
---    then error(n ++ " not defined in Misc env")
---    else head(foundItems);
---
---  return
---    case foundItem of
---    | stringMiscItem(s) -> s
---    | _                 -> error(n ++ " MiscItem is not a stringMiscItem")
---    end;
---}
+function lookupMiscString
+String ::= n::String  e::Decorated Env
+{
+  local foundItems :: [MiscItem] = lookupMisc(n, e);
+  local foundItem :: MiscItem =
+    if   null(foundItems)
+    then error(n ++ " not defined in Misc env")
+    else head(foundItems);
+
+  return
+    case foundItem of
+    | stringMiscItem(s) -> s
+    | _                 -> error(n ++ " MiscItem is not a stringMiscItem")
+    end;
+}
+
+function findScopeNum
+Integer ::= n::Name cilkFrameVars::[Pair<Name Integer>]
+{
+  return
+    if   null(cilkFrameVars)
+    then error(n.name ++ " not found in cilk frame")
+    else if   n.name == fst(head(cilkFrameVars)).name
+         then snd(head(cilkFrameVars))
+         else findScopeNum(n, tail(cilkFrameVars));
+}
 
