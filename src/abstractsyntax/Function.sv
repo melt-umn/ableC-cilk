@@ -1053,7 +1053,7 @@ top::Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init]
               ])
             )
           ),
-          bodyLinkage
+          reverse(bodyLinkage)
         )
         ++ [init(
             objectInitializer(

@@ -105,7 +105,7 @@ s::Stmt ::= f::Expr args::Exprs
   local spawnStmt :: Stmt =
     case fast, slow of
     | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
-    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr())
+    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt())
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -190,6 +190,9 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
   local lScopeNum :: Integer = findScopeNum(lName, s.cilkFrameVarsGlobal);
   local scopeName :: Name = name("scope" ++ toString(lScopeNum), location=builtIn());
   local frameName :: Name = name("_cilk_" ++ cilkProcName ++ "_frame", location=builtIn());
+
+  local saveL :: Stmt =
+    txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
 
   local frameTypeExpr :: BaseTypeExpr =
     tagReferenceTypeExpr([], structSEU(), frameName);
@@ -285,11 +288,11 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l));
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL);
 }
 
 abstract production cilk_slowCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr
+s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
 {
   -- reserve a sync number
   s.syncCount = s.syncCountInh + 1;
@@ -338,12 +341,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr
       pushFrame,
       exprStmt(call),
 
-      -- TODO: this save/restore was not necessary in cilk2c because certain
-      --   variable references were replaced with references to the cilk frame,
-      --   in addition to the TODO of only saving/restoring live/dirty
-      --   variables, we should look into what exactly needs to be
-      --   saved/restored here
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveAssignedVar,
       makeXPopFrame(ml, true),
       restoreVariables(s.cilkFrameVarsGlobal),
 
