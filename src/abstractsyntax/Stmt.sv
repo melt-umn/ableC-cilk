@@ -19,6 +19,8 @@ synthesized attribute cilkFrameVarsLocal  :: [Pair<Name Integer>] occurs on Stmt
 autocopy    attribute cilkLinksInh :: [Init] occurs on Stmt;
 synthesized attribute cilkLinks    :: [Init] occurs on Stmt;
 
+autocopy    attribute cilkProcName :: Name occurs on Stmt;
+
 aspect production functionDecl
 top::FunctionDecl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
                       bty::BaseTypeExpr  mty::TypeModifierExpr  name::Name

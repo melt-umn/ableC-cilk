@@ -179,8 +179,6 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  local cilkProcName :: String = lookupMiscString(cilk_new_proc_name, s.env);
-
   -- FIXME: l should be an id, not an Expr
   local lName :: Name =
     case l of
@@ -189,7 +187,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     end;
   local lScopeNum :: Integer = findScopeNum(lName, s.cilkFrameVarsGlobal);
   local scopeName :: Name = name("scope" ++ toString(lScopeNum), location=builtIn());
-  local frameName :: Name = name("_cilk_" ++ cilkProcName ++ "_frame", location=builtIn());
+  local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtIn());
 
   local saveL :: Stmt =
     txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
@@ -525,23 +523,6 @@ top::Stmt ::= syncCount::Integer
         location=builtIn()
       )
     );
-}
-
--- return first found item; otherwise error
-function lookupMiscString
-String ::= n::String  e::Decorated Env
-{
-  local foundItems :: [MiscItem] = lookupMisc(n, e);
-  local foundItem :: MiscItem =
-    if   null(foundItems)
-    then error(n ++ " not defined in Misc env")
-    else head(foundItems);
-
-  return
-    case foundItem of
-    | stringMiscItem(s) -> s
-    | _                 -> error(n ++ " MiscItem is not a stringMiscItem")
-    end;
 }
 
 function findScopeNum

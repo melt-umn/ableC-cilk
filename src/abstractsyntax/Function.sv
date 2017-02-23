@@ -76,7 +76,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Slow Clone --------------------------------------------------
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
-  local slowCloneBody :: Stmt = transformSlowClone(body, newName, args);
+  local slowCloneBody :: Stmt = transformSlowClone(body, args);
   newDecls <- [slowCloneDecl];
 
   slowCloneBody.env = top.env;
@@ -85,6 +85,8 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   slowCloneBody.scopeCountInh = 0;
 --  slowCloneBody.cilkFrameVarsGlobal = [];
   slowCloneBody.cilkLinksInh = [];
+  slowCloneBody.returnType = top.returnType;
+  slowCloneBody.cilkProcName = newName;
 
 ---- Proc Info --------------------------------------------------
   local linkage :: Decl = makeLinkage(newName, bty, slowCloneBody.cilkLinks);
@@ -177,7 +179,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 global cilk_in_fast_clone_id::String = "cilk_in_fast_clone";
 global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
-global cilk_new_proc_name::String = "cilk_new_proc_name";
 
 {- based on cilkc2c/transform.c:MakeFrame()
 
@@ -960,7 +961,7 @@ Parameters ::= newName::Name
 }
 
 abstract production transformSlowClone
-top::Stmt ::= body::Stmt newName::Name args::Parameters
+top::Stmt ::= body::Stmt args::Parameters
 {
   -- top.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
@@ -993,8 +994,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     ])
   with {
     env = addEnv([
-        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
-        miscDef(cilk_new_proc_name, stringMiscItem(newName.name))
+        miscDef(cilk_in_slow_clone_id, emptyMiscItem())
       ],
       top.env);
   } ;
@@ -1122,10 +1122,5 @@ abstract production builtIn
 top::Location ::=
 {
   forwards to loc("Built In", 0, 0, 0, 0, 0, 0);
-}
-
-abstract production stringMiscItem
-top::MiscItem ::= s::String
-{
 }
 
