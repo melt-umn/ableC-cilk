@@ -499,10 +499,10 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 }
 
 -- _cilk_frame->header.entry = syncCount;
-abstract production makeSetHeaderEntry
-top::Stmt ::= syncCount::Integer
+function makeSetHeaderEntry
+Stmt ::= syncCount::Integer
 {
-  forwards to
+  return
     exprStmt(
       binaryOpExpr(
         -- cilk_frame->header.entry

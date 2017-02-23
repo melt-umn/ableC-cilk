@@ -67,8 +67,8 @@ s::Stmt ::=
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":"),
-        restoreVariables(s.cilkFrameVarsGlobal)
+        txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":;")
+--        restoreVariables(s.cilkFrameVarsGlobal)
       ])
     );
     
@@ -93,6 +93,7 @@ s::Stmt ::=
       setHeaderEntry,
       saveVariables(s.cilkFrameVarsGlobal),
       recoveryStmt,
+      restoreVariables(s.cilkFrameVarsGlobal), -- TODO: should this be here?
       afterSyncSlow,
       atThreadBoundary
     ]);
