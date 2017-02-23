@@ -13,7 +13,7 @@ r::Stmt ::= e::MaybeExpr
   r.functiondefs = [];
 
   r.scopeCount = r.scopeCountInh;
-  r.scopes = r.scopesInh;
+  r.cilkFrameDeclsScopes = r.cilkFrameDeclsScopesInh;
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, r.env));

@@ -189,14 +189,11 @@ global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
      { ... scope <n> vars ... } scope<n>;
    };
 -}
-function makeFrame
-Decl ::= newName::Name args::Parameters body::Stmt
+abstract production makeFrame
+top::Decl ::= newName::Name args::Parameters body::Stmt
 {
-  body.scopesInh = args.scopes;
+  body.cilkFrameDeclsScopesInh = cons([], args.cilkFrameDeclsScopes);
   body.scopeCountInh = 0;
-
-  -- TODO: if return type is not an arithmetic type, put it in frame
-  local frameFields :: StructItemList = consStructItem(header, body.scopes);
 
   local header :: StructItem =
     structItem(
@@ -207,7 +204,13 @@ Decl ::= newName::Name args::Parameters body::Stmt
       ])
     );
 
-  return
+  -- TODO: if return type is not an arithmetic type, put it in frame
+  local frameFields :: StructItemList =
+    consStructItem(header,
+      wrapFrameDeclsScopes(reverse(body.cilkFrameDeclsScopes), 0)
+    );
+
+  forwards to
     typeExprDecl([],
       structTypeExpr(
         [],
@@ -219,6 +222,40 @@ Decl ::= newName::Name args::Parameters body::Stmt
         )
       )
     );
+}
+
+function wrapFrameDeclsScopes
+StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
+{
+  return
+    if   null(cilkFrameDeclsScopes)
+    then nilStructItem()
+    else if   null(head(cilkFrameDeclsScopes))
+         then wrapFrameDeclsScopes(tail(cilkFrameDeclsScopes), scopeCount)
+         else
+           consStructItem(
+              structItem(
+                [],
+                structTypeExpr(
+                  [],
+                  structDecl(
+                    [],
+                    nothingName(),
+--                    nilStructItem(),
+                    foldStructItem(head(cilkFrameDeclsScopes)),
+                    location=builtIn()
+                  )
+                ),
+                foldStructDeclarator([
+                  structField(
+                    name("scope" ++ toString(scopeCount), location=builtIn()),
+                    baseTypeExpr(),
+                    []
+                  )
+                ])
+              ),
+              wrapFrameDeclsScopes(tail(cilkFrameDeclsScopes), scopeCount + 1)
+            );
 }
 
 {- based on cilkc2c/transform.c:MakeArgsAndResultStruct()

@@ -14,7 +14,7 @@ s::Stmt ::=
   s.functiondefs = [];
 
   s.scopeCount = s.scopeCountInh;
-  s.scopes = s.scopesInh;
+  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
   s.cilkFrameVarsLocal = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));

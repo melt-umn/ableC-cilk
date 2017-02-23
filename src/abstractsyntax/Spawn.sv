@@ -15,7 +15,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.functiondefs = [];
 
   s.scopeCount = s.scopeCountInh;
-  s.scopes = s.scopesInh;
+  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
   s.cilkFrameVarsLocal = [];
 
   -- add _cilk_ws as first argument
@@ -81,6 +81,10 @@ s::Stmt ::= f::Expr args::Exprs
   s.defs = [];
   s.freeVariables = [];
   s.functiondefs = [];
+
+  s.scopeCount = s.scopeCountInh;
+  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameVarsLocal = [];
 
   -- TODO: refactor this to reuse cilkSpawnStmt code
 

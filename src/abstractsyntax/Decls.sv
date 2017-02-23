@@ -8,8 +8,7 @@ synthesized attribute cilkFrameDecl  :: StructDeclarator  occurs on Declarator;
 synthesized attribute cilkFrameVar :: Pair<Name Integer> occurs on ParameterDecl;
 
 -- StructItemList to be put into scopes in cilk frame
-synthesized attribute scopeFields :: StructItemList occurs on Parameters;
-synthesized attribute scopeField  :: StructItem     occurs on ParameterDecl;
+synthesized attribute cilkFrameDeclsScope :: StructItem occurs on ParameterDecl;
 
 aspect production root
 top::Root ::= d::Decls
@@ -63,29 +62,18 @@ top::Decl ::= storage::[StorageClass] attrs::[Attribute] ty::BaseTypeExpr
 aspect production consParameters
 top::Parameters ::= h::ParameterDecl t::Parameters
 {
-  top.scopes =
-    consStructItem(
-      structItem(
-        [],
-        structTypeExpr(
-          [],
-          structDecl([], nothingName(), top.scopeFields, location=builtIn())
-        ),
-        foldStructDeclarator([
-          structField(name("scope0", location=builtIn()), baseTypeExpr(), [])
-        ])
-      ),
-      nilStructItem()
+  top.cilkFrameDeclsScopes =
+    cons(
+      cons(h.cilkFrameDeclsScope, head(t.cilkFrameDeclsScopes)),
+      tail(t.cilkFrameDeclsScopes)
     );
-  top.scopeFields = consStructItem(h.scopeField, t.scopeFields);
   top.cilkFrameVarsLocal = cons(h.cilkFrameVar, t.cilkFrameVarsLocal);
 }
 
 aspect production nilParameters
 top::Parameters ::=
 {
-  top.scopes = nilStructItem();
-  top.scopeFields = nilStructItem();
+  top.cilkFrameDeclsScopes = [[]];
   top.cilkFrameVarsLocal = [];
 }
 
@@ -98,7 +86,7 @@ top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifi
     | _            -> error("cilk function parameter must be named")
     end;
 
-  top.scopeField =
+  top.cilkFrameDeclsScope =
     structItem(
       attrs,
       bty,

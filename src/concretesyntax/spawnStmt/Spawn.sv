@@ -42,3 +42,22 @@ concrete productions sb::SpawnBody
         abs:nilExpr()
       );
   }
+
+| f::PostfixExpr_c '(' args::ArgumentExprList_c ')' ';'
+  {
+    sb.ast =
+      cilkSpawnStmtNoEqOp(
+        f.ast,
+        abs:foldExpr(args.ast)
+      );
+  }
+
+| f::PostfixExpr_c '(' ')' ';'
+  {
+    sb.ast =
+      cilkSpawnStmtNoEqOp(
+        f.ast,
+        abs:nilExpr()
+      );
+  }
+

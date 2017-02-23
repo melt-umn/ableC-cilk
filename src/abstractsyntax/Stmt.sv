@@ -8,9 +8,9 @@ synthesized attribute syncCount    :: Integer occurs on Stmt;
 autocopy    attribute scopeCountInh :: Integer occurs on Stmt, Decl, Decls, Declarators, Declarator;
 synthesized attribute scopeCount    :: Integer occurs on Stmt;
 
--- StructItemList to be put into cilk frame
-autocopy    attribute scopesInh :: StructItemList occurs on Stmt;
-synthesized attribute scopes    :: StructItemList occurs on Stmt, Parameters;
+-- StructItemList to be put into scopes in cilk frame
+autocopy    attribute cilkFrameDeclsScopesInh :: [[StructItem]] occurs on Stmt;
+synthesized attribute cilkFrameDeclsScopes    :: [[StructItem]] occurs on Stmt, Parameters;
 
 -- a list of all names and scopes of variables in cilk frame
 autocopy    attribute cilkFrameVarsGlobal :: [Pair<Name Integer>] occurs on Stmt;
@@ -36,7 +36,7 @@ top::Stmt ::=
 {
   top.syncCount = top.syncCountInh;
   top.scopeCount = top.scopeCountInh;
-  top.scopes = top.scopesInh;
+  top.cilkFrameDeclsScopes = top.cilkFrameDeclsScopesInh;
   top.cilkFrameVarsLocal = [];
   top.cilkLinks = top.cilkLinksInh;
 }
@@ -50,8 +50,8 @@ top::Stmt ::= h::Stmt  t::Stmt
   t.scopeCountInh = h.scopeCount;
   top.scopeCount = t.scopeCount;
 
-  t.scopesInh = h.scopes;
-  top.scopes = t.scopes;
+  t.cilkFrameDeclsScopesInh = h.cilkFrameDeclsScopes;
+  top.cilkFrameDeclsScopes = t.cilkFrameDeclsScopes;
 
   top.cilkFrameVarsLocal = h.cilkFrameVarsLocal ++ t.cilkFrameVarsLocal;
 
@@ -63,9 +63,13 @@ aspect production compoundStmt
 top::Stmt ::= s::Stmt
 {
   top.syncCount = s.syncCount;
-  s.scopeCountInh = top.scopeCountInh + 1;
+  s.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
+  s.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
   top.scopeCount = s.scopeCount;
-  top.scopes = s.scopes;
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
   top.cilkLinks = s.cilkLinks;
 }
@@ -73,35 +77,45 @@ top::Stmt ::= s::Stmt
 aspect production declStmt
 top::Stmt ::= d::Decl
 {
-  top.scopes =
+  top.cilkFrameDeclsScopes =
     -- TODO: use syn attribute on Decl
     case d of
     | variableDecls(_, attrs, ty, dcls) ->
-        consStructItem(
-          structItem(
-            [],
-            structTypeExpr(
-              [],
-              structDecl(
-                [],
-                nothingName(),
-                foldStructItem([
-                  structItem(attrs, ty, dcls.cilkFrameDecls)
-                ]),
-                location=builtIn()
-              )
-            ),
-            foldStructDeclarator([
-              structField(
-                name("scope" ++ toString(top.scopeCount), location=builtIn()),
-                baseTypeExpr(),
-                []
-              )
-            ])
-          ),
-          top.scopesInh
+        -- push new decls on head of inherited list of lists
+        cons(
+          cons(structItem(attrs, ty, dcls.cilkFrameDecls), head(top.cilkFrameDeclsScopesInh)),
+          tail(top.cilkFrameDeclsScopesInh)
         )
     end;
+
+--    -- TODO: use syn attribute on Decl
+--    case d of
+--    | variableDecls(_, attrs, ty, dcls) ->
+--        consStructItem(
+--          structItem(
+--            [],
+--            structTypeExpr(
+--              [],
+--              structDecl(
+--                [],
+--                nothingName(),
+--                foldStructItem([
+--                  structItem(attrs, ty, dcls.cilkFrameDecls)
+--                ]),
+--                location=builtIn()
+--              )
+--            ),
+--            foldStructDeclarator([
+--              structField(
+--                name("scope" ++ toString(top.scopeCount), location=builtIn()),
+--                baseTypeExpr(),
+--                []
+--              )
+--            ])
+--          ),
+--          top.cilkFrameDeclsScopesInh
+--        )
+--    end;
 
   top.cilkFrameVarsLocal = d.cilkFrameVarsLocal;
 }
@@ -111,11 +125,21 @@ top::Stmt ::= c::Expr t::Stmt e::Stmt
 {
   e.syncCountInh = t.syncCount;
   top.syncCount = e.syncCount;
-  t.scopeCountInh = top.scopeCountInh + 1;
-  e.scopeCountInh = t.scopeCount + 1;
+
+  t.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
+  e.scopeCountInh =
+    if null(head(t.cilkFrameDeclsScopes))
+    then t.scopeCount
+    else t.scopeCount + 1;
   top.scopeCount = e.scopeCount;
-  e.scopesInh = t.scopes;
-  top.scopes = e.scopes;
+
+  t.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
+  e.cilkFrameDeclsScopesInh = cons([], t.cilkFrameDeclsScopes);
+  top.cilkFrameDeclsScopes = e.cilkFrameDeclsScopes;
+
   top.cilkFrameVarsLocal = t.cilkFrameVarsLocal ++ e.cilkFrameVarsLocal;
 
   e.cilkLinksInh = t.cilkLinks;
@@ -126,9 +150,16 @@ aspect production whileStmt
 top::Stmt ::= e::Expr b::Stmt
 {
   top.syncCount = b.syncCount;
-  b.scopeCountInh = top.scopeCountInh + 1;
+
+  b.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
-  top.scopes = b.scopes;
+
+  b.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
+  top.cilkFrameDeclsScopes = b.cilkFrameDeclsScopes;
+
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
   top.cilkLinks = b.cilkLinks;
 }
@@ -137,9 +168,16 @@ aspect production doStmt
 top::Stmt ::= b::Stmt e::Expr
 {
   top.syncCount = b.syncCount;
-  b.scopeCountInh = top.scopeCountInh + 1;
+
+  b.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
-  top.scopes = b.scopes;
+
+  b.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
+  top.cilkFrameDeclsScopes = b.cilkFrameDeclsScopes;
+
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
   top.cilkLinks = b.cilkLinks;
 }
@@ -148,9 +186,16 @@ aspect production forStmt
 top::Stmt ::= i::MaybeExpr c::MaybeExpr s::MaybeExpr b::Stmt
 {
   top.syncCount = b.syncCount;
-  b.scopeCountInh = top.scopeCountInh + 1;
+
+  b.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
-  top.scopes = b.scopes;
+
+  b.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
+  top.cilkFrameDeclsScopes = b.cilkFrameDeclsScopes;
+
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
   top.cilkLinks = b.cilkLinks;
 }
@@ -159,37 +204,50 @@ aspect production forDeclStmt
 top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
 {
   top.syncCount = b.syncCount;
-  b.scopeCountInh = top.scopeCountInh + 1;
+  b.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
 
-  top.scopes =
+  b.cilkFrameDeclsScopesInh = cons([], top.cilkFrameDeclsScopesInh);
+  top.cilkFrameDeclsScopes =
+    -- TODO: use syn attribute on Decl
     case i of
     | variableDecls(_, attrs, ty, dcls) ->
-        consStructItem(
-          structItem(
-            [],
-            structTypeExpr(
-              [],
-              structDecl(
-                [],
-                nothingName(),
-                foldStructItem([
-                  structItem(attrs, ty, dcls.cilkFrameDecls)
-                ]),
-                location=builtIn()
-              )
-            ),
-            foldStructDeclarator([
-              structField(
-                name("scope" ++ toString(b.scopeCountInh), location=builtIn()),
-                baseTypeExpr(),
-                []
-              )
-            ])
-          ),
-          top.scopesInh
+        -- push new decls on head of inherited list of lists
+        cons(
+          cons(structItem(attrs, ty, dcls.cilkFrameDecls), head(top.cilkFrameDeclsScopesInh)),
+          tail(top.cilkFrameDeclsScopesInh)
         )
     end;
+--    case i of
+--    | variableDecls(_, attrs, ty, dcls) ->
+--        consStructItem(
+--          structItem(
+--            [],
+--            structTypeExpr(
+--              [],
+--              structDecl(
+--                [],
+--                nothingName(),
+--                foldStructItem([
+--                  structItem(attrs, ty, dcls.cilkFrameDecls)
+--                ]),
+--                location=builtIn()
+--              )
+--            ),
+--            foldStructDeclarator([
+--              structField(
+--                name("scope" ++ toString(b.scopeCountInh), location=builtIn()),
+--                baseTypeExpr(),
+--                []
+--              )
+--            ])
+--          ),
+--          top.cilkFrameDeclsScopesInh
+--        )
+--    end;
 
   top.cilkFrameVarsLocal = i.cilkFrameVarsLocal ++ b.cilkFrameVarsLocal;
   top.cilkLinks = b.cilkLinks;
@@ -199,9 +257,12 @@ aspect production switchStmt
 top::Stmt ::= e::Expr b::Stmt
 {
   top.syncCount = b.syncCount;
-  b.scopeCountInh = top.scopeCountInh + 1;
+  b.scopeCountInh =
+    if null(head(top.cilkFrameDeclsScopesInh))
+    then top.scopeCountInh
+    else top.scopeCountInh + 1;
   top.scopeCount = b.scopeCount;
-  top.scopes = b.scopes;
+  top.cilkFrameDeclsScopes = b.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = b.cilkFrameVarsLocal;
   top.cilkLinks = b.cilkLinks;
 }
@@ -211,7 +272,7 @@ top::Stmt ::= l::Name s::Stmt
 {
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
-  top.scopes = s.scopes;
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
   top.cilkLinks = s.cilkLinks;
 }
@@ -221,7 +282,7 @@ top::Stmt ::= v::Expr s::Stmt
 {
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
-  top.scopes = s.scopes;
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
   top.cilkLinks = s.cilkLinks;
 }
@@ -231,7 +292,7 @@ top::Stmt ::= s::Stmt
 {
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
-  top.scopes = s.scopes;
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
   top.cilkLinks = s.cilkLinks;
 }
@@ -241,7 +302,7 @@ top::Stmt ::= l::Expr u::Expr s::Stmt
 {
   top.syncCount = s.syncCount;
   top.scopeCount = s.scopeCount;
-  top.scopes = s.scopes;
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkFrameVarsLocal = s.cilkFrameVarsLocal;
   top.cilkLinks = s.cilkLinks;
 }
