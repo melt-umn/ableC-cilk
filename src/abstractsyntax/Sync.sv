@@ -2,7 +2,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 
 {- based on cilkc2c/transform.c:TransformSync() -}
 abstract production cilk_syncStmt
-s::Stmt ::=
+s::Stmt ::= loc::Location
 {
   s.pp = text("sync");
 
@@ -22,7 +22,7 @@ s::Stmt ::=
 
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync()
-    | false,true  -> cilk_slowCloneSync()
+    | false,true  -> cilk_slowCloneSync(loc)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -41,10 +41,12 @@ s::Stmt ::=
 }
 
 abstract production cilk_slowCloneSync
-s::Stmt ::=
+s::Stmt ::= loc::Location
 {
+  local syncLabel :: Integer = makeSyncLabel(loc);
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLabels = [syncLabel];
 
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
@@ -54,7 +56,7 @@ s::Stmt ::=
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncLabel);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
@@ -67,7 +69,7 @@ s::Stmt ::=
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":;")
+        txtStmt("return; _cilk_sync" ++ toString(syncLabel) ++ ":;")
 --        restoreVariables(s.env)
       ])
     );
@@ -97,5 +99,12 @@ s::Stmt ::=
       afterSyncSlow,
       atThreadBoundary
     ]);
+}
+
+function makeSyncLabel
+Integer ::= loc::Location
+{
+  -- TODO: possible problem if line has more than 10000 characters?
+  return 10000 * loc.line + loc.column;
 }
 

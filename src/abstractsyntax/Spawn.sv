@@ -26,7 +26,9 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
     );
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  -- TODO: is taking the head of syncLabels right?
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLabels));
 --  local setHeaderEntry :: Stmt =
 --    foldStmt([
 --      txtStmt("/* s.env.scopeId: " ++ toString(s.env.scopeId) ++ " */"),
@@ -72,7 +74,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l));
+  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l), l.location);
 }
 
 abstract production cilkSpawnStmtNoEqOp
@@ -106,15 +108,17 @@ s::Stmt ::= f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  -- TODO: is taking the head of syncLabels right?
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLabels));
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   local spawnStmt :: Stmt =
     case fast, slow of
-    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
-    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt())
+    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr(), f.location)
+    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -130,10 +134,13 @@ s::Stmt ::= f::Expr args::Exprs
 }
 
 abstract production cilk_fastCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr
+s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 {
+  local syncLabel :: Integer = makeSyncLabel(loc);
+
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLabels = [syncLabel];
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
@@ -297,14 +304,17 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL);
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL, l.location);
 }
 
 abstract production cilk_slowCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
+s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
+  local syncLabel :: Integer = makeSyncLabel(loc);
+
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLabels = [syncLabel];
 
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
@@ -330,7 +340,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
     ifStmtNoElse(
       mkIntConst(0, builtIn()),
       foldStmt([
-        txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
+        txtStmt("_cilk_sync" ++ toString(syncLabel) ++ ":"),
         restoreVariables(s.env)
       ])
     );
@@ -509,7 +519,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 
 -- _cilk_frame->header.entry = syncCount;
 function makeSetHeaderEntry
-Stmt ::= syncCount::Integer
+Stmt ::= syncLabel::Integer
 {
   return
     exprStmt(
@@ -528,7 +538,7 @@ Stmt ::= syncCount::Integer
           location=builtIn()
         ),
         assignOp(eqOp(location=builtIn()), location=builtIn()),
-        mkIntConst(syncCount, builtIn()),
+        mkIntConst(syncLabel, builtIn()),
         location=builtIn()
       )
     );

@@ -185,7 +185,7 @@ global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
-  body.cilkFrameDeclsScopesInh = [];
+--  body.cilkFrameDeclsScopesInh = [];
 --  body.cilkFrameDeclsScopesInh = cons([], args.cilkFrameDeclsScopes);
 --  body.scopeCountInh = 0;
 
@@ -1140,7 +1140,8 @@ top::Stmt ::= body::Stmt args::Parameters
     ]);
 
   local switchHeaderEntry :: Stmt =
-    txtStmt("switch (_cilk_frame->header.entry) {" ++ makeSwitchHeaderCases(top.syncCount) ++ "}");
+    txtStmt("switch (_cilk_frame->header.entry) {"
+    ++ makeSwitchHeaderCases(top.syncLabels) ++ "}");
 
   forwards to
     foldStmt([
@@ -1159,13 +1160,13 @@ top::Stmt ::= body::Stmt args::Parameters
 }
 
 function makeSwitchHeaderCases
-String ::= syncCount::Integer
+String ::= syncLabels::[Integer]
 {
   return
-    if   syncCount < 1
+    if   null(syncLabels)
     then ""
-    else "case " ++ toString(syncCount) ++ ": goto _cilk_sync" ++
-      toString(syncCount) ++ "; " ++ makeSwitchHeaderCases(syncCount - 1);
+    else "case " ++ toString(head(syncLabels)) ++ ": goto _cilk_sync" ++
+      toString(head(syncLabels)) ++ "; " ++ makeSwitchHeaderCases(tail(syncLabels));
 }
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
