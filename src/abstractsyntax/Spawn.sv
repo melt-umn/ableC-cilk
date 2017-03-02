@@ -10,13 +10,13 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
   s.functiondefs = [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
@@ -27,6 +27,11 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   -- _cilk_frame->header.entry = syncCount;
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+--  local setHeaderEntry :: Stmt =
+--    foldStmt([
+--      txtStmt("/* s.env.scopeId: " ++ toString(s.env.scopeId) ++ " */"),
+--      makeSetHeaderEntry(s.syncCount)
+--    ]);
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
@@ -48,7 +53,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       spawnStmt
     ]);
 }
@@ -78,13 +83,13 @@ s::Stmt ::= f::Expr args::Exprs
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
   s.functiondefs = [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   -- TODO: refactor this to reuse cilkSpawnStmt code
 
@@ -118,7 +123,7 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
-        saveVariables(s.cilkFrameVarsGlobal),
+        saveVariables(s.env),
         spawnStmt
       ])
     );
@@ -189,8 +194,10 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     | declRefExpr(id) -> id
     | _               -> error("spawn lhs must be an id")
     end;
-  local lScopeNum :: Integer = findScopeNum(lName, s.cilkFrameVarsGlobal);
-  local scopeName :: Name = name("scope" ++ toString(lScopeNum), location=builtIn());
+
+  -- TODO: check that lookupScopeId does not return Nil
+  local lScopeId :: String = head(lookupScopeId(lName.name, s.env));
+  local scopeName :: Name = name("scope" ++ lScopeId, location=builtIn());
   local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtIn());
 
   local saveL :: Stmt =
@@ -324,7 +331,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
       mkIntConst(0, builtIn()),
       foldStmt([
         txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
-        restoreVariables(s.cilkFrameVarsGlobal)
+        restoreVariables(s.env)
       ])
     );
     
@@ -345,10 +352,10 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
 
       saveAssignedVar,
       makeXPopFrame(ml, true),
-      restoreVariables(s.cilkFrameVarsGlobal),
+      restoreVariables(s.env),
 
       afterSpawnSlow,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       recoveryStmt,
       atThreadBoundary
     ]);
@@ -381,8 +388,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
-  top.cilkFrameVarsLocal = [];
-
   local l :: Expr =
     case ml of
     | justExpr(l1)  -> l1
@@ -527,16 +532,5 @@ Stmt ::= syncCount::Integer
         location=builtIn()
       )
     );
-}
-
-function findScopeNum
-Integer ::= n::Name cilkFrameVars::[Pair<Name Integer>]
-{
-  return
-    if   null(cilkFrameVars)
-    then error(n.name ++ " not found in cilk frame")
-    else if   n.name == fst(head(cilkFrameVars)).name
-         then snd(head(cilkFrameVars))
-         else findScopeNum(n, tail(cilkFrameVars));
 }
 

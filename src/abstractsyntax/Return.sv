@@ -8,12 +8,13 @@ r::Stmt ::= e::MaybeExpr
   -- r.env depends on these, if not set then compiler will crash while looping
   --  in forwarded returnStmt to look for these
   r.globalDecls := e.globalDecls;
-  r.defs = e.defs;
+  r.defs := e.defs;
   r.freeVariables = e.freeVariables;
   r.functiondefs = [];
 
-  r.scopeCount = r.scopeCountInh;
-  r.cilkFrameDeclsScopes = r.cilkFrameDeclsScopesInh;
+--  r.scopeCount = r.scopeCountInh;
+--  r.cilkFrameDeclsScopes = r.cilkFrameDeclsScopesInh;
+  r.cilkFrameDeclsScopes = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, r.env));
@@ -32,7 +33,6 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_fastCloneReturn
 r::Stmt ::= e::MaybeExpr
 {
-  r.cilkFrameVarsLocal = [];
   local tempInt::Integer = genInt();
 
   -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
@@ -77,8 +77,6 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_slowCloneReturn
 r::Stmt ::= me::MaybeExpr
 {
-  r.cilkFrameVarsLocal = [];
-
   local e :: Expr =
     case me of
       justExpr(e1)  -> e1

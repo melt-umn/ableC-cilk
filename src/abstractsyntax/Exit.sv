@@ -6,7 +6,7 @@ s::Stmt ::= me::MaybeExpr
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
   s.functiondefs = [];
 

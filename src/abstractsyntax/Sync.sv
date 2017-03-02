@@ -9,13 +9,13 @@ s::Stmt ::=
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
   s.functiondefs = [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
@@ -68,7 +68,7 @@ s::Stmt ::=
       ),
       foldStmt([
         txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":;")
---        restoreVariables(s.cilkFrameVarsGlobal)
+--        restoreVariables(s.env)
       ])
     );
     
@@ -91,9 +91,9 @@ s::Stmt ::=
     foldStmt([
       beforeSyncSlow,
       setHeaderEntry,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       recoveryStmt,
-      restoreVariables(s.cilkFrameVarsGlobal), -- TODO: should this be here?
+      restoreVariables(s.env), -- TODO: should this be here?
       afterSyncSlow,
       atThreadBoundary
     ]);
