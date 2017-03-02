@@ -10,11 +10,11 @@ synthesized attribute cilkFrameVar :: Pair<Name Integer> occurs on ParameterDecl
 -- StructItemList to be put into scopes in cilk frame
 synthesized attribute cilkFrameDeclsScope :: StructItem occurs on ParameterDecl;
 
-aspect production root
-top::Root ::= d::Decls
-{
-  d.scopeCountInh = -1;
-}
+--aspect production root
+--top::Root ::= d::GlobalDecls
+--{
+--  d.scopeCountInh = -1;
+--}
 
 aspect production consDeclarator
 top::Declarators ::= h::Declarator t::Declarators
