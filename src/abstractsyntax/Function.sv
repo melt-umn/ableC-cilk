@@ -924,7 +924,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.defs := [];
 --  top.defs := args.defs;
   top.freeVariables = [];
-  top.functiondefs = [];
+  top.functiondefs := [];
 
   local fastClone :: Stmt =
     foldStmt([
@@ -1126,7 +1126,7 @@ top::Stmt ::= body::Stmt args::Parameters
   top.globalDecls := [];
   top.defs := [];
   top.freeVariables = [];
-  top.functiondefs = [];
+  top.functiondefs := [];
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;

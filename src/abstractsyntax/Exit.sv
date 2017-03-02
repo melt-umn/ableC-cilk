@@ -8,7 +8,7 @@ s::Stmt ::= me::MaybeExpr
   s.globalDecls := [];
   s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
   local retval :: Exprs =
     case me.justTheExpr of

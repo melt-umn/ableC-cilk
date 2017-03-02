@@ -11,7 +11,7 @@ s::Stmt ::= loc::Location
   s.globalDecls := [];
   s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
 --  s.scopeCount = s.scopeCountInh;
 --  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;

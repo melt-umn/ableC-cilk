@@ -12,7 +12,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   s.globalDecls := [];
   s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
 --  s.scopeCount = s.scopeCountInh;
 --  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
@@ -87,7 +87,7 @@ s::Stmt ::= f::Expr args::Exprs
   s.globalDecls := [];
   s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
 --  s.scopeCount = s.scopeCountInh;
 --  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
