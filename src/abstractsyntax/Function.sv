@@ -1143,7 +1143,7 @@ top::Stmt ::= body::Stmt args::Parameters
 
   local switchHeaderEntry :: Stmt =
     txtStmt("switch (_cilk_frame->header.entry) {"
-    ++ makeSwitchHeaderCases(top.syncLocations) ++ "}");
+    ++ makeSwitchHeaderCases(length(top.syncLocations)) ++ "}");
 
   forwards to
     foldStmt([
@@ -1163,13 +1163,13 @@ top::Stmt ::= body::Stmt args::Parameters
 }
 
 function makeSwitchHeaderCases
-String ::= syncLocations::[Location]
+String ::= syncCount::Integer
 {
   return
-    if   null(syncLocations)
+    if   syncCount < 1
     then ""
-    else "case " ++ toString(makeSyncLabel(head(syncLocations))) ++ ": goto _cilk_sync" ++
-      toString(makeSyncLabel(head(syncLocations))) ++ "; " ++ makeSwitchHeaderCases(tail(syncLocations));
+    else "case " ++ toString(syncCount) ++ ": goto _cilk_sync" ++
+      toString(syncCount) ++ "; " ++ makeSwitchHeaderCases(syncCount - 1);
 }
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}

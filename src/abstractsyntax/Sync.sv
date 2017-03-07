@@ -47,24 +47,17 @@ s::Stmt ::= loc::Location
 --  s.syncCount = s.syncCountInh + 1;
   s.syncLocations = [loc];
 
-  local foundSyncLocations :: [[Location]] = lookupSyncLocations(cilk_sync_locations_id, s.env);
-  local allSyncLocations :: [Location] =
-    if   null(foundSyncLocations)
-    then error("syncLocations not passed down through environment")
-    else head(foundSyncLocations);
-
-  local syncCount :: Integer = positionOf(locationEq, loc, allSyncLocations) + 1;
+  local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
-      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
       txtStmt("/* expand CILK2C_BEFORE_SYNC_SLOW() macro */"),
       txtStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(loc);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
@@ -77,7 +70,7 @@ s::Stmt ::= loc::Location
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("return; _cilk_sync" ++ toString(makeSyncLabel(loc)) ++ ":;")
+        txtStmt("return; _cilk_sync" ++ toString(syncCount) ++ ":;")
 --        restoreVariables(s.env)
       ])
     );
@@ -107,12 +100,5 @@ s::Stmt ::= loc::Location
       afterSyncSlow,
       atThreadBoundary
     ]);
-}
-
-function makeSyncLabel
-Integer ::= loc::Location
-{
-  -- TODO: possible problem if line has more than 10000 characters?
-  return 10000 * loc.line + loc.column;
 }
 
