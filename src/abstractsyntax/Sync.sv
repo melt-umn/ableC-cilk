@@ -43,20 +43,28 @@ s::Stmt ::=
 abstract production cilk_slowCloneSync
 s::Stmt ::= loc::Location
 {
-  local syncLabel :: Integer = makeSyncLabel(loc);
   -- reserve a sync number
 --  s.syncCount = s.syncCountInh + 1;
-  s.syncLabels = [syncLabel];
+  s.syncLocations = [loc];
+
+  local foundSyncLocations :: [[Location]] = lookupSyncLocations(cilk_sync_locations_id, s.env);
+  local allSyncLocations :: [Location] =
+    if   null(foundSyncLocations)
+    then error("syncLocations not passed down through environment")
+    else head(foundSyncLocations);
+
+  local syncCount :: Integer = positionOf(locationEq, loc, allSyncLocations) + 1;
 
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
+      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
       txtStmt("/* expand CILK2C_BEFORE_SYNC_SLOW() macro */"),
       txtStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncLabel);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(loc);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
@@ -69,7 +77,7 @@ s::Stmt ::= loc::Location
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("return; _cilk_sync" ++ toString(syncLabel) ++ ":;")
+        txtStmt("return; _cilk_sync" ++ toString(makeSyncLabel(loc)) ++ ":;")
 --        restoreVariables(s.env)
       ])
     );

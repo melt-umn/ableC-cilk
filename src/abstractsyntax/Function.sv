@@ -172,6 +172,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 global cilk_in_fast_clone_id::String = "cilk_in_fast_clone";
 global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
+global cilk_sync_locations_id::String = "cilk_sync_locations_id";
 
 {- based on cilkc2c/transform.c:MakeFrame()
 
@@ -935,13 +936,13 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 --  top.defs <- fastClone.defs;
 
 --  fastClone.scopeCountInh = top.scopeCountInh;
-  fastClone.env =
-    addEnv(
-      [
-        miscDef(cilk_in_fast_clone_id, emptyMiscItem())
-      ],
-      top.env
-    );
+--  fastClone.env =
+--    addEnv(
+--      [
+--        miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+--      ],
+--      top.env
+--    );
   fastClone.returnType = body.returnType;
 
   -- TODO: warn if any shadowed variables in cilk frame
@@ -957,7 +958,8 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       env =
         addEnv(
           [
-            miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
           ],
           top.env
         );
@@ -1141,7 +1143,7 @@ top::Stmt ::= body::Stmt args::Parameters
 
   local switchHeaderEntry :: Stmt =
     txtStmt("switch (_cilk_frame->header.entry) {"
-    ++ makeSwitchHeaderCases(top.syncLabels) ++ "}");
+    ++ makeSwitchHeaderCases(top.syncLocations) ++ "}");
 
   forwards to
     foldStmt([
@@ -1153,20 +1155,21 @@ top::Stmt ::= body::Stmt args::Parameters
     ])
   with {
     env = addEnv([
-        miscDef(cilk_in_slow_clone_id, emptyMiscItem())
+        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+        syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
       ],
       top.env);
   } ;
 }
 
 function makeSwitchHeaderCases
-String ::= syncLabels::[Integer]
+String ::= syncLocations::[Location]
 {
   return
-    if   null(syncLabels)
+    if   null(syncLocations)
     then ""
-    else "case " ++ toString(head(syncLabels)) ++ ": goto _cilk_sync" ++
-      toString(head(syncLabels)) ++ "; " ++ makeSwitchHeaderCases(tail(syncLabels));
+    else "case " ++ toString(makeSyncLabel(head(syncLocations))) ++ ": goto _cilk_sync" ++
+      toString(makeSyncLabel(head(syncLocations))) ++ "; " ++ makeSwitchHeaderCases(tail(syncLocations));
 }
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}

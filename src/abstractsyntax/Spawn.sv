@@ -27,12 +27,14 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   -- _cilk_frame->header.entry = syncCount;
 --  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
-  -- TODO: is taking the head of syncLabels right?
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLabels));
+  -- TODO: is taking the head of syncLocations right?
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLocations));
 --  local setHeaderEntry :: Stmt =
 --    foldStmt([
---      txtStmt("/* s.env.scopeId: " ++ toString(s.env.scopeId) ++ " */"),
---      makeSetHeaderEntry(s.syncCount)
+--      txtStmt("/* head(s.syncLocations).line: " ++ toString(head(s.syncLocations).line) ++ " */"),
+--      txtStmt("/* head(allSyncLocations).line: " ++ toString(head(allSyncLocations).line) ++ " */"),
+----      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
+--      makeSetHeaderEntry(head(s.syncLocations))
 --    ]);
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
@@ -109,8 +111,8 @@ s::Stmt ::= f::Expr args::Exprs
     end;
 
 --  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
-  -- TODO: is taking the head of syncLabels right?
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLabels));
+  -- TODO: is taking the head of syncLocations right?
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLocations));
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
@@ -136,14 +138,21 @@ s::Stmt ::= f::Expr args::Exprs
 abstract production cilk_fastCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 {
-  local syncLabel :: Integer = makeSyncLabel(loc);
-
   -- reserve a sync number
 --  s.syncCount = s.syncCountInh + 1;
-  s.syncLabels = [syncLabel];
+  s.syncLocations = [loc];
+
+  local foundSyncLocations :: [[Location]] = lookupSyncLocations(cilk_sync_locations_id, s.env);
+  local allSyncLocations :: [Location] =
+    if   null(foundSyncLocations)
+    then error("syncLocations not passed down through environment")
+    else head(foundSyncLocations);
+
+  local syncCount :: Integer = positionOf(locationEq, loc, allSyncLocations) + 1;
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
+      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
       txtStmt("/* expand CILK2C_BEFORE_SPAWN_FAST() macro */"),
       txtStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
@@ -310,15 +319,22 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 abstract production cilk_slowCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
-  local syncLabel :: Integer = makeSyncLabel(loc);
-
   -- reserve a sync number
 --  s.syncCount = s.syncCountInh + 1;
-  s.syncLabels = [syncLabel];
+  s.syncLocations = [loc];
+
+  local foundSyncLocations :: [[Location]] = lookupSyncLocations(cilk_sync_locations_id, s.env);
+  local allSyncLocations :: [Location] =
+    if   null(foundSyncLocations)
+    then error("syncLocations not passed down through environment")
+    else head(foundSyncLocations);
+
+  local syncCount :: Integer = positionOf(locationEq, loc, allSyncLocations) + 1;
 
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
     foldStmt([
+      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
       txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
       txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
@@ -340,7 +356,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
     ifStmtNoElse(
       mkIntConst(0, builtIn()),
       foldStmt([
-        txtStmt("_cilk_sync" ++ toString(syncLabel) ++ ":"),
+        txtStmt("_cilk_sync" ++ toString(makeSyncLabel(loc)) ++ ":"),
         restoreVariables(s.env)
       ])
     );
@@ -519,7 +535,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 
 -- _cilk_frame->header.entry = syncCount;
 function makeSetHeaderEntry
-Stmt ::= syncLabel::Integer
+Stmt ::= syncLabel::Location
 {
   return
     exprStmt(
@@ -538,9 +554,15 @@ Stmt ::= syncLabel::Integer
           location=builtIn()
         ),
         assignOp(eqOp(location=builtIn()), location=builtIn()),
-        mkIntConst(syncLabel, builtIn()),
+        mkIntConst(makeSyncLabel(syncLabel), builtIn()),
         location=builtIn()
       )
     );
+}
+
+function locationEq
+Boolean ::= l1::Location l2::Location
+{
+  return l1.filename == l2.filename && l1.line == l2.line && l1.column == l2.column;
 }
 

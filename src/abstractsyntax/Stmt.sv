@@ -2,7 +2,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax;
 
 -- keep track of how many times we sync in order to generate entry labels
 --autocopy    attribute syncCountInh :: Integer occurs on Stmt;
-synthesized attribute syncLabels :: [Integer] occurs on Stmt;
+synthesized attribute syncLocations :: [Location] occurs on Stmt;
 
 -- number each scope, match with scope structs in cilk frame
 --autocopy    attribute scopeCountInh :: Integer occurs on Stmt;
@@ -30,7 +30,7 @@ aspect default production
 top::Stmt ::=
 {
 --  top.syncCount = top.syncCountInh;
-  top.syncLabels = [];
+  top.syncLocations = [];
 --  top.scopeCount = top.scopeCountInh;
 --  top.cilkFrameDeclsScopes = top.cilkFrameDeclsScopesInh;
   top.cilkFrameDeclsScopes = [];
@@ -41,7 +41,7 @@ aspect production seqStmt
 top::Stmt ::= h::Stmt  t::Stmt
 {
 --  t.syncCountInh = h.syncCount;
-  top.syncLabels = h.syncLabels ++ t.syncLabels;
+  top.syncLocations = h.syncLocations ++ t.syncLocations;
 
 --  t.scopeCountInh = h.scopeCount;
 --  top.scopeCount = t.scopeCount;
@@ -56,7 +56,7 @@ top::Stmt ::= h::Stmt  t::Stmt
 aspect production compoundStmt
 top::Stmt ::= s::Stmt
 {
-  top.syncLabels = s.syncLabels;
+  top.syncLocations = s.syncLocations;
 --  s.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
 --    then top.scopeCountInh
@@ -116,7 +116,7 @@ aspect production ifStmt
 top::Stmt ::= c::Expr t::Stmt e::Stmt
 {
 --  e.syncCountInh = t.syncCount;
-  top.syncLabels = t.syncLabels ++ e.syncLabels;
+  top.syncLocations = t.syncLocations ++ e.syncLocations;
 
 --  t.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
@@ -139,7 +139,7 @@ top::Stmt ::= c::Expr t::Stmt e::Stmt
 aspect production whileStmt
 top::Stmt ::= e::Expr b::Stmt
 {
-  top.syncLabels = b.syncLabels;
+  top.syncLocations = b.syncLocations;
 
 --  b.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
@@ -156,7 +156,7 @@ top::Stmt ::= e::Expr b::Stmt
 aspect production doStmt
 top::Stmt ::= b::Stmt e::Expr
 {
-  top.syncLabels = b.syncLabels;
+  top.syncLocations = b.syncLocations;
 
 --  b.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
@@ -173,7 +173,7 @@ top::Stmt ::= b::Stmt e::Expr
 aspect production forStmt
 top::Stmt ::= i::MaybeExpr c::MaybeExpr s::MaybeExpr b::Stmt
 {
-  top.syncLabels = b.syncLabels;
+  top.syncLocations = b.syncLocations;
 
 --  b.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
@@ -190,7 +190,7 @@ top::Stmt ::= i::MaybeExpr c::MaybeExpr s::MaybeExpr b::Stmt
 aspect production forDeclStmt
 top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
 {
-  top.syncLabels = b.syncLabels;
+  top.syncLocations = b.syncLocations;
 --  b.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
 --    then top.scopeCountInh
@@ -243,7 +243,7 @@ top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
 aspect production switchStmt
 top::Stmt ::= e::Expr b::Stmt
 {
-  top.syncLabels = b.syncLabels;
+  top.syncLocations = b.syncLocations;
 --  b.scopeCountInh =
 --    if null(head(top.cilkFrameDeclsScopesInh))
 --    then top.scopeCountInh
@@ -256,7 +256,7 @@ top::Stmt ::= e::Expr b::Stmt
 aspect production labelStmt
 top::Stmt ::= l::Name s::Stmt
 {
-  top.syncLabels = s.syncLabels;
+  top.syncLocations = s.syncLocations;
 --  top.scopeCount = s.scopeCount;
   top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkLinks = s.cilkLinks;
@@ -265,7 +265,7 @@ top::Stmt ::= l::Name s::Stmt
 aspect production caseLabelStmt
 top::Stmt ::= v::Expr s::Stmt
 {
-  top.syncLabels = s.syncLabels;
+  top.syncLocations = s.syncLocations;
 --  top.scopeCount = s.scopeCount;
   top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkLinks = s.cilkLinks;
@@ -274,7 +274,7 @@ top::Stmt ::= v::Expr s::Stmt
 aspect production defaultLabelStmt
 top::Stmt ::= s::Stmt
 {
-  top.syncLabels = s.syncLabels;
+  top.syncLocations = s.syncLocations;
 --  top.scopeCount = s.scopeCount;
   top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkLinks = s.cilkLinks;
@@ -283,7 +283,7 @@ top::Stmt ::= s::Stmt
 aspect production caseLabelRangeStmt
 top::Stmt ::= l::Expr u::Expr s::Stmt
 {
-  top.syncLabels = s.syncLabels;
+  top.syncLocations = s.syncLocations;
 --  top.scopeCount = s.scopeCount;
   top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkLinks = s.cilkLinks;
