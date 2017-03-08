@@ -106,6 +106,12 @@ r::Stmt ::= me::MaybeExpr
   local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &" ++ tmpNameStr ++
                                     ", sizeof(" ++ tmpNameStr ++ "));");
 
+  local mSetResult :: Stmt =
+    case me of
+      justExpr(_)   -> foldStmt([tmpDecl, setResult])
+    | nothingExpr() -> nullStmt()
+    end;
+
   -- expand CILK2C_BEFORE_RETURN_SLOW() macro
   local beforeSlowReturn :: Stmt =
     foldStmt([
@@ -117,8 +123,7 @@ r::Stmt ::= me::MaybeExpr
   forwards to
     compoundStmt(
       foldStmt([
-        tmpDecl,
-        setResult,
+        mSetResult,
         beforeSlowReturn,
         returnStmt(nothingExpr())
       ])
