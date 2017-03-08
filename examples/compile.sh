@@ -13,22 +13,29 @@ set -v
 
 # We assume that all #include directives are pulled out and stored in fib.orig_includes
 
+# extract the base filename, everything before the dot (.)
+
+filename=$1
+extension="${filename##*.}"
+filename_withoutpath=$(basename $filename)
+basefilename="${filename_withoutpath%.*}"
+
 # Step 1
 # run java -jar ableC.jar on fib.xc, with include directive tacked on.
 echo "int START_OF_XC_CODE = 1;" > fib.marker
 
-cat fib.includes_for_xc fib.marker fib.xc > fib.step1.xc
+cat fib.includes_for_xc fib.marker $basefilename.xc > $basefilename.step1.xc
 
-java -jar ../artifact/ableC.jar fib.step1.xc -I/usr/local/include/cilk
+java -jar ../artifact/ableC.jar $basefilename.step1.xc -I/usr/local/include/cilk
 
 # TODO: decide whether steps 2 and 4 are needed
 
 # Step 2
-# extract code from fib.step1.pp_out.c that came after code from the includes. 
+# extract code from $basefilename.step1.pp_out.c that came after code from the includes. 
 # This is the code that ableC generated from the original code.
 # This yields fib.no_includes.pp_out.c
 
-#sed -n '/START_OF_XC_CODE/,$p' fib.step1.pp_out.c > fib.no_includes.pp_out.c
+#sed -n '/START_OF_XC_CODE/,$p' $basefilename.step1.pp_out.c > fib.no_includes.pp_out.c
 
 
 # Step 4
@@ -47,7 +54,7 @@ java -jar ../artifact/ableC.jar fib.step1.xc -I/usr/local/include/cilk
 gcc -xc \
     -I/usr/local/include/cilk \
     -D__REENTRANT \
-    -O2 fib.step1.pp_out.c  \
+    -O2 $basefilename.step1.pp_out.c  \
     -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread
 
 echo "gcc return code was $?"
