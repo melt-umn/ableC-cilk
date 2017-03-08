@@ -59,8 +59,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local frameStruct :: Decl = makeFrame(newName, args, body);
 --  body.scopesInh = args.scopes;
 --  body.scopeCountInh = 0;
---  body.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ body.cilkFrameVarsLocal;
---  body.cilkFrameVarsGlobal = [];
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
@@ -81,9 +79,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   slowCloneBody.env = top.env;
 --  slowCloneBody.env = addEnv ([ miscDef(cilk_in_slow_clone_id, emptyMiscItem()) ], top.env);
-  slowCloneBody.cilkFrameVarsGlobal = args.cilkFrameVarsLocal ++ slowCloneBody.cilkFrameVarsLocal;
-  slowCloneBody.scopeCountInh = 0;
---  slowCloneBody.cilkFrameVarsGlobal = [];
+--  slowCloneBody.scopeCountInh = 0;
   slowCloneBody.cilkLinksInh = [];
   slowCloneBody.returnType = nothing();
   slowCloneBody.cilkProcName = newName;
@@ -96,9 +92,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local fastCloneDecl :: Decl = fastClone(bty, mty, newName, dcls, fastCloneBody);
   local fastCloneBody :: Stmt = transformFastClone(body, newName, args);
   newDecls <- [fastCloneDecl];
-
---  fastCloneBody.cilkFrameVarsGlobal = body.cilkFrameVarsGlobal;
---  fastCloneBody.cilkFrameVarsGlobal = [];
 
 -- Import Function --------------------------------------------------
   newDecls <- [ importDecl ];
@@ -179,6 +172,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 global cilk_in_fast_clone_id::String = "cilk_in_fast_clone";
 global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
+global cilk_sync_locations_id::String = "cilk_sync_locations_id";
 
 {- based on cilkc2c/transform.c:MakeFrame()
 
@@ -192,8 +186,9 @@ global cilk_in_slow_clone_id::String = "cilk_in_slow_clone";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
-  body.cilkFrameDeclsScopesInh = cons([], args.cilkFrameDeclsScopes);
-  body.scopeCountInh = 0;
+--  body.cilkFrameDeclsScopesInh = [];
+--  body.cilkFrameDeclsScopesInh = cons([], args.cilkFrameDeclsScopes);
+--  body.scopeCountInh = 0;
 
   local header :: StructItem =
     structItem(
@@ -204,11 +199,31 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
       ])
     );
 
+  -- get all name/scopeIds pairs except those at global scope
+--  local cilkFrameVars :: [Pair<String Integer>] =
+--    foldr(append, [], map(tm:toList, take(length(body.env.scopeIds)-1, body.env.scopeIds)));
+
+  -- collect all names with the same scopeId into a list and pair with the scopeId
+--  local varsByScopes :: [Pair<Integer [String]>] = collectFrameVars(cilkFrameVars, []);
+
   -- TODO: if return type is not an arithmetic type, put it in frame
-  local frameFields :: StructItemList =
-    consStructItem(header,
-      wrapFrameDeclsScopes(reverse(body.cilkFrameDeclsScopes), 0)
-    );
+--  local frameFields :: StructItemList = makeFrameDeclsScopes(varsByScopes, body.env);
+
+  -- collect all fields with the same scopeId into a list and pair with the scopeId
+  local frameDeclsByScopes :: [Pair<String [StructItem]>] =
+    collectFrameDecls(args.cilkFrameDeclsScopes ++ body.cilkFrameDeclsScopes, []);
+
+  local frameFields :: [StructItem] =
+    cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
+
+--  local frameFields :: StructItemList =
+--    consStructItem(
+--      header,
+--      consStructItem(
+--        wrapFrameDeclsScopes(args.cilkFrameDeclsScopes, 0),
+--        wrapFrameDeclsScopes(reverse(body.cilkFrameDeclsScopes), 0)
+--      )
+--    );
 
   forwards to
     typeExprDecl([],
@@ -217,10 +232,98 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
         structDecl(
           [],
           justName(name("_cilk_" ++ newName.name ++ "_frame", location=builtIn())),
-          frameFields,
+          foldStructItem(frameFields),
           location=builtIn()
         )
       )
+    );
+}
+
+function collectFrameDecls
+[Pair<String [StructItem]>] ::= cilkFrameDecls::[Pair<String StructItem>]
+                             cilkFrameDeclsByScopes::[Pair<String [StructItem]>]
+{
+  return
+    if   null(cilkFrameDecls)
+    then cilkFrameDeclsByScopes
+    else collectFrameDecls(
+           tail(cilkFrameDecls), addDeclToScopes(head(cilkFrameDecls), cilkFrameDeclsByScopes)
+         );
+}
+
+function addDeclToScopes
+[Pair<String [StructItem]>] ::= cilkFrameDecl::Pair<String StructItem>
+                             cilkFrameDeclsByScopes::[Pair<String [StructItem]>]
+{
+  return
+    if   null(cilkFrameDeclsByScopes)
+    then [pair(fst(cilkFrameDecl), [snd(cilkFrameDecl)])]
+    else
+      if   fst(head(cilkFrameDeclsByScopes)) == fst(cilkFrameDecl)
+      then
+        cons(
+          pair(
+            fst(cilkFrameDecl),
+            cons(snd(cilkFrameDecl), snd(head(cilkFrameDeclsByScopes)))
+          ),
+          tail(cilkFrameDeclsByScopes)
+        )
+      else
+        cons(
+          head(cilkFrameDeclsByScopes),
+          addDeclToScopes(cilkFrameDecl, tail(cilkFrameDeclsByScopes))
+        );
+}
+
+-- TODO: choose better function names
+function makeFrameDeclsScope
+StructItem ::= cilkFrameDecl::Pair<String [StructItem]>
+{
+  return
+    structItem(
+      [],
+      structTypeExpr(
+        [],
+        structDecl(
+          [],
+          nothingName(),
+          foldStructItem(snd(cilkFrameDecl)),
+          location=builtIn()
+        )
+      ),
+      foldStructDeclarator([
+        structField(
+          name("scope" ++ fst(cilkFrameDecl), location=builtIn()),
+          baseTypeExpr(),
+          []
+        )
+      ])
+    );
+}
+
+function makeFrameDecls
+[StructItem] ::= names::[String]  env::Decorated Env
+{
+  return
+    if   null(names)
+    then []
+    else cons(makeFrameDecl(head(names), env), makeFrameDecls(tail(names), env));
+}
+
+function makeFrameDecl
+StructItem ::= n::String  env::Decorated Env
+{
+  -- TODO: check if lookupValue() returns Nil
+  local value :: ValueItem = head(lookupValue(n, env));
+  local typerep :: Type = value.typerep;
+
+  return
+    structItem(
+      [], -- TODO: attributes?
+      value.typerep.baseTypeExpr,
+      foldStructDeclarator([
+        structField(name(n, location=builtIn()), value.typerep.typeModifierExpr, [])
+      ])
     );
 }
 
@@ -374,8 +477,12 @@ Stmt ::= arg::ParameterDecl
 }
 
 function restoreVariables
-Stmt ::= cilkFrameVars::[Pair<Name Integer>]
+Stmt ::= env::Decorated Env
 {
+  -- get all name/scopeIds pairs except those at global scope
+  local cilkFrameVars :: [Pair<String String>] =
+    foldr(append, [], map(tm:toList, take(length(env.scopeIds)-1, env.scopeIds)));
+
   return
     foldStmt([
       txtStmt("/* TODO: restore only live variables */"),
@@ -384,16 +491,24 @@ Stmt ::= cilkFrameVars::[Pair<Name Integer>]
 }
 
 function restoreVariable
-Stmt ::= cilkFrameVar::Pair<Name Integer>
+Stmt ::= cilkFrameVar::Pair<String String>
 {
-  local n :: Name = fst(cilkFrameVar);
-  local scope :: Integer = snd(cilkFrameVar);
-  return txtStmt(n.name ++ " = " ++ "_cilk_frame->scope" ++ toString(scope) ++ "." ++ n.name ++ ";");
+  local n :: String = fst(cilkFrameVar);
+  local scopeId :: String = snd(cilkFrameVar);
+  return
+    -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
+    if   n != "_cilk_ws" && n != "_cilk_frame"
+    then txtStmt(n ++ " = " ++ "_cilk_frame->scope" ++ scopeId ++ "." ++ n ++ ";")
+    else nullStmt();
 }
 
 function saveVariables
-Stmt ::= cilkFrameVars::[Pair<Name Integer>]
+Stmt ::= env::Decorated Env
 {
+  -- get all name/scopeIds pairs except those at global scope
+  local cilkFrameVars :: [Pair<String String>] =
+    foldr(append, [], map(tm:toList, take(length(env.scopeIds)-1, env.scopeIds)));
+
   return
     foldStmt([
       txtStmt("/* TODO: save only live, dirty variables */"),
@@ -402,12 +517,16 @@ Stmt ::= cilkFrameVars::[Pair<Name Integer>]
 }
 
 function saveVariable
-Stmt ::= cilkFrameVar::Pair<Name Integer>
+Stmt ::= cilkFrameVar::Pair<String String>
 {
-  local n :: Name = fst(cilkFrameVar);
-  local scope :: Integer = snd(cilkFrameVar);
-  return txtStmt("_cilk_frame->scope" ++ toString(scope) ++ "." ++ n.name ++ " = "
-           ++ n.name ++ ";");
+  local n :: String = fst(cilkFrameVar);
+  local scopeId :: String = snd(cilkFrameVar);
+  return
+    -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
+    if   n != "_cilk_ws" && n != "_cilk_frame"
+    then txtStmt("_cilk_frame->scope" ++ scopeId ++ "." ++ n ++ " = "
+           ++ n ++ ";")
+    else nullStmt();
 }
 
 {- based on cilkc2c/transform.c:MakeImportDecl() -}
@@ -802,11 +921,11 @@ top::TypeModifierExpr ::= mty::TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
-  top.cilkFrameVarsLocal = fastClone.cilkFrameVarsLocal ++ args.cilkFrameVarsLocal;
   top.globalDecls := [];
-  top.defs = [];
+  top.defs := [];
+--  top.defs := args.defs;
   top.freeVariables = [];
-  top.functiondefs = [];
+  top.functiondefs := [];
 
   local fastClone :: Stmt =
     foldStmt([
@@ -814,20 +933,24 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       body
     ]);
 
-  fastClone.scopeCountInh = top.scopeCountInh;
-  fastClone.env =
-    addEnv(
-      [
-        miscDef(cilk_in_fast_clone_id, emptyMiscItem())
-      ],
-      top.env
-    );
+--  top.defs <- fastClone.defs;
+
+--  fastClone.scopeCountInh = top.scopeCountInh;
+--  fastClone.env =
+--    addEnv(
+--      [
+--        miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+--      ],
+--      top.env
+--    );
   fastClone.returnType = body.returnType;
 
-  local fwd :: Stmt =
-    if   frameContainsShadow(top.cilkFrameVarsLocal)
-    then warnStmt([err(builtIn(), "shadowing variable names is currently not supported")])
-    else fastClone;
+  -- TODO: warn if any shadowed variables in cilk frame
+  local fwd :: Stmt = fastClone;
+--  local fwd :: Stmt =
+--    if   frameContainsShadow(top.env)
+--    then warnStmt([err(builtIn(), "shadowing variable names is currently not supported")])
+--    else fastClone;
 
   forwards to
     fwd
@@ -835,7 +958,8 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       env =
         addEnv(
           [
-            miscDef(cilk_in_fast_clone_id, emptyMiscItem())
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
           ],
           top.env
         );
@@ -845,8 +969,6 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 abstract production addFastStuff
 top::Stmt ::= newName::Name
 {
-  top.cilkFrameVarsLocal = [];
-
   local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtIn());
   local sigName :: Name = name("_cilk_" ++ newName.name ++ "_sig", location=builtIn());
   local frameName :: Name = name("_cilk_frame", location=builtIn());
@@ -936,15 +1058,15 @@ top::Stmt ::= newName::Name
     ]);
 }
 
-function frameContainsShadow
-Boolean ::= cilkFrameVars::[Pair<Name Integer>]
-{
-  return
-    if   null(cilkFrameVars)
-    then false
-    else containsBy(pairFstNameEq, head(cilkFrameVars), tail(cilkFrameVars))
-           || frameContainsShadow(tail(cilkFrameVars));
-}
+--function frameContainsShadow
+--Boolean ::= cilkFrameVars::[Pair<Name Integer>]
+--{
+--  return
+--    if   null(cilkFrameVars)
+--    then false
+--    else containsBy(pairFstNameEq, head(cilkFrameVars), tail(cilkFrameVars))
+--           || frameContainsShadow(tail(cilkFrameVars));
+--}
 
 function pairFstNameEq
 Boolean ::= l::Pair<Name a> r::Pair<Name a>
@@ -1004,9 +1126,9 @@ top::Stmt ::= body::Stmt args::Parameters
   -- top.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   top.globalDecls := [];
-  top.defs = [];
+  top.defs := [];
   top.freeVariables = [];
-  top.functiondefs = [];
+  top.functiondefs := [];
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
@@ -1020,19 +1142,21 @@ top::Stmt ::= body::Stmt args::Parameters
     ]);
 
   local switchHeaderEntry :: Stmt =
-    txtStmt("switch (_cilk_frame->header.entry) {" ++ makeSwitchHeaderCases(top.syncCount) ++ "}");
+    txtStmt("switch (_cilk_frame->header.entry) {"
+    ++ makeSwitchHeaderCases(length(top.syncLocations)) ++ "}");
 
   forwards to
     foldStmt([
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
-      restoreVariables(args.cilkFrameVarsLocal),
+      restoreVariables(args.env),
       body
     ])
   with {
     env = addEnv([
-        miscDef(cilk_in_slow_clone_id, emptyMiscItem())
+        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+        syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
       ],
       top.env);
   } ;

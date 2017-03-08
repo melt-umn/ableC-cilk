@@ -10,13 +10,13 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
@@ -25,8 +25,20 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
       args
     );
 
+  local syncCount :: Integer = lookupSyncCount(l.location, s.env);
+
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
+  -- TODO: is taking the head of syncLocations right?
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLocations));
+--  local setHeaderEntry :: Stmt =
+--    foldStmt([
+--      txtStmt("/* head(s.syncLocations).line: " ++ toString(head(s.syncLocations).line) ++ " */"),
+--      txtStmt("/* head(allSyncLocations).line: " ++ toString(head(allSyncLocations).line) ++ " */"),
+----      txtStmt("/* syncCount: " ++ toString(syncCount) ++ " */"),
+--      makeSetHeaderEntry(head(s.syncLocations))
+--    ]);
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
@@ -48,7 +60,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   forwards to
     foldStmt([
       setHeaderEntry,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       spawnStmt
     ]);
 }
@@ -67,7 +79,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l));
+  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l), l.location);
 }
 
 abstract production cilkSpawnStmtNoEqOp
@@ -78,13 +90,13 @@ s::Stmt ::= f::Expr args::Exprs
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   -- TODO: refactor this to reuse cilkSpawnStmt code
 
@@ -101,15 +113,20 @@ s::Stmt ::= f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=builtIn())
     end;
 
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  local syncCount :: Integer = lookupSyncCount(f.location, s.env);
+
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
+  -- TODO: is taking the head of syncLocations right?
+--  local setHeaderEntry :: Stmt = makeSetHeaderEntry(head(s.syncLocations));
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   local spawnStmt :: Stmt =
     case fast, slow of
-    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
-    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt())
+    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr(), f.location)
+    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -118,17 +135,20 @@ s::Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         setHeaderEntry,
-        saveVariables(s.cilkFrameVarsGlobal),
+        saveVariables(s.env),
         spawnStmt
       ])
     );
 }
 
 abstract production cilk_fastCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr
+s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 {
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLocations = [loc];
+
+  local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
@@ -189,8 +209,10 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     | declRefExpr(id) -> id
     | _               -> error("spawn lhs must be an id")
     end;
-  local lScopeNum :: Integer = findScopeNum(lName, s.cilkFrameVarsGlobal);
-  local scopeName :: Name = name("scope" ++ toString(lScopeNum), location=builtIn());
+
+  -- TODO: check that lookupScopeId does not return Nil
+  local lScopeId :: String = head(lookupScopeId(lName.name, s.env));
+  local scopeName :: Name = name("scope" ++ lScopeId, location=builtIn());
   local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtIn());
 
   local saveL :: Stmt =
@@ -290,14 +312,17 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
       location=builtIn()
     );
 
-  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL);
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL, l.location);
 }
 
 abstract production cilk_slowCloneSpawn
-s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
+s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLocations = [loc];
+
+  local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
@@ -323,8 +348,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
     ifStmtNoElse(
       mkIntConst(0, builtIn()),
       foldStmt([
-        txtStmt("_cilk_sync" ++ toString(s.syncCount) ++ ":"),
-        restoreVariables(s.cilkFrameVarsGlobal)
+        txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":"),
+        restoreVariables(s.env)
       ])
     );
     
@@ -345,10 +370,10 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
 
       saveAssignedVar,
       makeXPopFrame(ml, true),
-      restoreVariables(s.cilkFrameVarsGlobal),
+      restoreVariables(s.env),
 
       afterSpawnSlow,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       recoveryStmt,
       atThreadBoundary
     ]);
@@ -381,8 +406,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
-  top.cilkFrameVarsLocal = [];
-
   local l :: Expr =
     case ml of
     | justExpr(l1)  -> l1
@@ -529,14 +552,21 @@ Stmt ::= syncCount::Integer
     );
 }
 
-function findScopeNum
-Integer ::= n::Name cilkFrameVars::[Pair<Name Integer>]
+function locationEq
+Boolean ::= l1::Location l2::Location
 {
-  return
-    if   null(cilkFrameVars)
-    then error(n.name ++ " not found in cilk frame")
-    else if   n.name == fst(head(cilkFrameVars)).name
-         then snd(head(cilkFrameVars))
-         else findScopeNum(n, tail(cilkFrameVars));
+  return l1.filename == l2.filename && l1.line == l2.line && l1.column == l2.column;
+}
+
+function lookupSyncCount
+Integer ::= loc::Location  env::Decorated Env
+{
+  local foundSyncLocations :: [[Location]] = lookupSyncLocations(cilk_sync_locations_id, env);
+  local allSyncLocations :: [Location] =
+    if   null(foundSyncLocations)
+    then error("syncLocations not passed down through environment")
+    else head(foundSyncLocations);
+
+  return positionOf(locationEq, loc, allSyncLocations) + 1;
 }
 

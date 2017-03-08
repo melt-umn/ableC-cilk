@@ -2,27 +2,27 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 
 {- based on cilkc2c/transform.c:TransformSync() -}
 abstract production cilk_syncStmt
-s::Stmt ::=
+s::Stmt ::= loc::Location
 {
   s.pp = text("sync");
 
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
-  s.defs = [];
+  s.defs := [];
   s.freeVariables = [];
-  s.functiondefs = [];
+  s.functiondefs := [];
 
-  s.scopeCount = s.scopeCountInh;
-  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
-  s.cilkFrameVarsLocal = [];
+--  s.scopeCount = s.scopeCountInh;
+--  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
+  s.cilkFrameDeclsScopes = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync()
-    | false,true  -> cilk_slowCloneSync()
+    | false,true  -> cilk_slowCloneSync(loc)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
@@ -41,10 +41,13 @@ s::Stmt ::=
 }
 
 abstract production cilk_slowCloneSync
-s::Stmt ::=
+s::Stmt ::= loc::Location
 {
   -- reserve a sync number
-  s.syncCount = s.syncCountInh + 1;
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLocations = [loc];
+
+  local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
@@ -54,7 +57,7 @@ s::Stmt ::=
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
-  local setHeaderEntry :: Stmt = makeSetHeaderEntry(s.syncCount);
+  local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
@@ -67,8 +70,8 @@ s::Stmt ::=
         location=builtIn()
       ),
       foldStmt([
-        txtStmt("return; _cilk_sync" ++ toString(s.syncCount) ++ ":;")
---        restoreVariables(s.cilkFrameVarsGlobal)
+        txtStmt("return; _cilk_sync" ++ toString(syncCount) ++ ":;")
+--        restoreVariables(s.env)
       ])
     );
     
@@ -91,9 +94,9 @@ s::Stmt ::=
     foldStmt([
       beforeSyncSlow,
       setHeaderEntry,
-      saveVariables(s.cilkFrameVarsGlobal),
+      saveVariables(s.env),
       recoveryStmt,
-      restoreVariables(s.cilkFrameVarsGlobal), -- TODO: should this be here?
+      restoreVariables(s.env), -- TODO: should this be here?
       afterSyncSlow,
       atThreadBoundary
     ]);
