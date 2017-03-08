@@ -95,13 +95,18 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Import Function --------------------------------------------------
   newDecls <- [ importDecl ];
-  local importBody :: Stmt = makeImportBody(newName, args);
+  local importBody :: Stmt = makeImportBody(newName, args, returnsVoid);
   local importDecl :: Decl = makeImportFunction(newName, importBody);
 
+  local returnsVoid :: Boolean =
+    case bty of
+      builtinTypeExpr(_, voidType()) -> true
+    | _                              -> false
+    end;
 
 -- Export Function --------------------------------------------------
   newDecls <- [ exportDecl ];
-  local exportBody :: Stmt = makeExportBody(newName, bty, args);
+  local exportBody :: Stmt = makeExportBody(newName, bty, args, returnsVoid);
   local exportDecl :: Decl = makeExportFunction(newName, bty, args, exportBody);
 }
 
@@ -573,7 +578,7 @@ top::Decl ::= fname::Name body::Stmt
 
 {- based on cilkc2c/transform.c:MakeImportBody() -}
 abstract production makeImportBody
-top::Stmt ::= fname::Name args::Parameters
+top::Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
 {
   local wsCastVoid :: Expr =
     explicitCastExpr(
@@ -624,7 +629,6 @@ top::Stmt ::= fname::Name args::Parameters
       fastCloneArgs,
       location=builtIn()
     );
-  -- TODO: don't assign result if return void
   local assignResult :: Expr =
     binaryOpExpr(
       procResult,
@@ -633,13 +637,19 @@ top::Stmt ::= fname::Name args::Parameters
       location=builtIn()
     );
 
+  -- don't assign result if return void
+  local mAssignResult :: Expr =
+    if   returnsVoid
+    then callFastClone
+    else assignResult;
+
   forwards to
     foldStmt([
       -- cast as void to prevent unused arg warning??
       exprStmt(wsCastVoid),
       exprStmt(procargsvCastVoid),
 
-      exprStmt(assignResult)
+      exprStmt(mAssignResult)
     ]);
 }
 
@@ -679,6 +689,7 @@ top::Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
 
 abstract production makeExportBody
 top::Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
+              returnsVoid::Boolean
 {
   local procArgsName :: Name = name("_cilk_procargs", location=builtIn());
   local procArgsStructName :: Name = name("_cilk_" ++ newName.name ++ "_args", location=builtIn());
@@ -741,23 +752,25 @@ top::Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
 
   local resultName :: Name = name("_cilk_proc_result", location=builtIn());
   local resultDecl :: Stmt =
-    declStmt(
-      variableDecls(
-        [],
-        [],
-        resultType,
-        foldDeclarator([
-          declarator(
-            resultName,
-            baseTypeExpr(),
-            [],
-            justInitializer(initResult)
-          )
-        ])
-      )
-    );
+    if   returnsVoid
+    then nullStmt()
+    else
+      declStmt(
+        variableDecls(
+          [],
+          [],
+          resultType,
+          foldDeclarator([
+            declarator(
+              resultName,
+              baseTypeExpr(),
+              [],
+              justInitializer(initResult)
+            )
+          ])
+        )
+      );
 
-  -- TODO: don't declare result if return void
   local initResult :: Initializer =
     exprInitializer(
       memberExpr(
@@ -768,13 +781,15 @@ top::Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
       )
     );
 
-  -- TODO: set to 0 if return void
   local sizeofRet :: Expr =
-    unaryExprOrTypeTraitExpr(
-      sizeofOp(location=builtIn()),
-      typeNameExpr(typeName(resultType, baseTypeExpr())),
-      location=builtIn()
-    );
+    if   returnsVoid
+    then mkIntConst(0, builtIn())
+    else
+      unaryExprOrTypeTraitExpr(
+        sizeofOp(location=builtIn()),
+        typeNameExpr(typeName(resultType, baseTypeExpr())),
+        location=builtIn()
+      );
 
   local importProcName :: Name = name("_cilk_" ++ newName.name ++ "_import", location=builtIn());
   local cilkStart :: Stmt =
@@ -791,13 +806,15 @@ top::Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
       )
     );
 
-  -- TODO: don't return result if return void
   local returnResult :: Stmt =
-    returnStmt(
-      justExpr(
-        declRefExpr(resultName, location=builtIn())
-      )
-    );
+    if   returnsVoid
+    then nullStmt()
+    else
+      returnStmt(
+        justExpr(
+          declRefExpr(resultName, location=builtIn())
+        )
+      );
 
   forwards to
     foldStmt([
