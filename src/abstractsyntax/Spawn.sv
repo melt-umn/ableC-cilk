@@ -348,7 +348,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
     ifStmtNoElse(
       mkIntConst(0, builtIn()),
       foldStmt([
-        txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":"),
+        txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;"),
         restoreVariables(s.env)
       ])
     );

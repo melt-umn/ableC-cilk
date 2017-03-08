@@ -15,17 +15,22 @@ imports edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 marking terminal Cilk_t 'cilk' lexer classes {Ckeyword};
 
 concrete production cilk_func_c
-top::Declaration_c ::= 'cilk'
-  d::CilkInitialFunctionDefinition_c  s::CompoundStatement_c
-{ top.ast = d.ast;
-  d.givenStmt = s.ast;
-}
-action {
-  context = lh:closeScope(context); -- Opened by InitialFunctionDefinition.
+top::Declaration_c ::= 'cilk' f::CilkFunctionDefinition_c
+{
+  top.ast = f.ast;
 }
 
-concrete productions top::Declaration_c
-| 'cilk' ds::DeclarationSpecifiers_c  d::Declarator_c  l::DeclarationList_c ';'
+closed nonterminal CilkFunctionDefinition_c with location, ast<ast:Decl>;
+concrete productions top::CilkFunctionDefinition_c
+| d::CilkInitialFunctionDefinition_c  s::CompoundStatement_c
+  {
+    top.ast = d.ast;
+    d.givenStmt = s.ast;
+  }
+  action {
+    context = lh:closeScope(context); -- Opened by InitialFunctionDefinition.
+  }
+| ds::DeclarationSpecifiers_c d::Declarator_c ';'
   {
     ds.givenQualifiers = ds.typeQualifiers;
     d.givenType = ast:baseTypeExpr();
@@ -35,17 +40,8 @@ concrete productions top::Declaration_c
     top.ast =
       cilkFunctionProto(
         ds.storageClass, ds.specialSpecifiers, bt, d.ast,
-        d.declaredIdent, ds.attributes, ast:foldDecl(l.ast)
+        d.declaredIdent, ds.attributes
       );
-  }
-| 'cilk' d::Declarator_c  l::DeclarationList_c ';'
-  {
-    d.givenType = ast:baseTypeExpr();
-    local bt :: ast:BaseTypeExpr =
-      ast:figureOutTypeFromSpecifiers(d.location, [], [], [], []);
-
-    top.ast =
-      cilkFunctionProto([], [], bt, d.ast, d.declaredIdent, [], ast:foldDecl(l.ast));
   }
 
 closed nonterminal CilkInitialFunctionDefinition_c with location, ast<ast:Decl>, givenStmt;

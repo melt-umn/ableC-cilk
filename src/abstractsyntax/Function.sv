@@ -108,7 +108,6 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 abstract production cilkFunctionProto
 top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::[Attribute]
-  dcls::Decls
 {
   local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtIn());
   local void :: BaseTypeExpr = directTypeExpr(builtinType([], voidType()));
