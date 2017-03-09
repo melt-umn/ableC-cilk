@@ -182,19 +182,28 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
+  local lIsGlobal :: Boolean =
+    !containsBy(
+      stringEq, lName.name,
+      map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds))))
+     );
+
   s.cilkLinks =
-    cons(
-      init(objectInitializer(
-        foldInit([
-          init(exprInitializer(sizeofL)),
-          init(exprInitializer(frameOffset)),
-          init(exprInitializer(mkIntConst(0, builtIn()))),
-          init(exprInitializer(mkIntConst(0, builtIn()))),
-          init(exprInitializer(mkIntConst(0, builtIn())))
-        ])
-      )),
-      s.cilkLinksInh
-    );
+    if   lIsGlobal
+    then s.cilkLinksInh
+    else
+         cons(
+           init(objectInitializer(
+             foldInit([
+               init(exprInitializer(sizeofL)),
+               init(exprInitializer(frameOffset)),
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn())))
+             ])
+           )),
+           s.cilkLinksInh
+         );
 
   local sizeofL :: Expr =
     unaryExprOrTypeTraitExpr(
@@ -216,7 +225,10 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
   local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtIn());
 
   local saveL :: Stmt =
-    txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
+    if   lIsGlobal
+    then nullStmt()
+    else
+         txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
 
   local frameTypeExpr :: BaseTypeExpr =
     tagReferenceTypeExpr([], structSEU(), frameName);
