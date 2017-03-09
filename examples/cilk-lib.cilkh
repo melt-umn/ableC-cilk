@@ -41,4 +41,38 @@ do {						\
      spawn Cilk_really_exit(ret);		\
 } while (0)
 
+#define Cilk_active_size USE_PARAMETER2(active_size)
+//extern __cilksafe__ __nooutput__ __cilkonly__ Cilk_time Cilk_user_work;
+//extern __cilksafe__ __nooutput__ __cilkonly__ Cilk_time Cilk_user_critical_path;
+
+//extern Cilk_time Cilk_user_work;
+//extern Cilk_time Cilk_user_critical_path;
+
+#define Cilk_user_work _cilk_ws->user_work
+#define Cilk_user_critical_path _cilk_ws->user_critical_path
+
+/***********************************************************\
+ * locks
+\***********************************************************/
+typedef volatile int Cilk_lockvar[1];
+
+static inline void Cilk_lock_init(Cilk_lockvar v)
+{
+     v[0] = 0;
+}
+
+static inline void Cilk_lock(Cilk_lockvar v)
+{
+//     while (Cilk_xchg((int *)v, 1) != 0) {
+//	  while (v[0]);  /* spin using only reads - reduces bus traffic */
+//     }
+}
+
+static inline void Cilk_unlock(Cilk_lockvar v)
+{
+//     Cilk_membar_StoreStore();
+//     v[0] = 0;
+}
+
 #endif				/* _CILK_LIB_H */
+

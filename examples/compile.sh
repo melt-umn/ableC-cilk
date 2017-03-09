@@ -55,7 +55,8 @@ gcc -xc \
     -I/usr/local/include/cilk \
     -D__REENTRANT \
     -O2 $basefilename.step1.pp_out.c  \
-    -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread
+    -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
+    -Wl,-rpath,/usr/local/lib -pthread -lm
 
 echo "gcc return code was $?"
 
