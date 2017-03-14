@@ -73,8 +73,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
     end;
 
 -- Slow Clone --------------------------------------------------
+
+  -- `cilk_return;' is always necessary so add it just in case user didn't include it
+  local newBody :: Stmt =
+    if   returnsVoid
+    then seqStmt(body, cilk_returnStmt(nothingExpr()))
+    else body;
+
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
-  local slowCloneBody :: Stmt = transformSlowClone(body, args);
+  local slowCloneBody :: Stmt = transformSlowClone(newBody, args);
   newDecls <- [slowCloneDecl];
 
   slowCloneBody.env = top.env;
@@ -85,12 +92,12 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   slowCloneBody.cilkProcName = newName;
 
 ---- Proc Info --------------------------------------------------
-  local linkage :: Decl = makeLinkage(newName, bty, slowCloneBody.cilkLinks);
+  local linkage :: Decl = makeLinkage(newName, bty, slowCloneBody.cilkLinks, returnsVoid);
   newDecls <- [linkage];
 
 -- Fast Clone --------------------------------------------------
   local fastCloneDecl :: Decl = fastClone(bty, mty, newName, dcls, fastCloneBody);
-  local fastCloneBody :: Stmt = transformFastClone(body, newName, args);
+  local fastCloneBody :: Stmt = transformFastClone(newBody, newName, args);
   newDecls <- [fastCloneDecl];
 
 -- Import Function --------------------------------------------------
@@ -372,8 +379,8 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
      ... args ...
    };
 -}
-function makeArgsAndResultStruct
-Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
+abstract production makeArgsAndResultStruct
+top::Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
 {
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtIn());
   local resultField :: StructItem =
@@ -393,7 +400,7 @@ Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
     | _                          -> consStructItem(resultField, argFields)
     end;
 
-  return
+  forwards to
     typeExprDecl([],
       structTypeExpr(
         [],
@@ -1190,15 +1197,17 @@ String ::= syncCount::Integer
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
 abstract production makeLinkage
-top::Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init]
+top::Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
 {
-  -- TODO: set to 0 if return void
   local sizeofRet :: Expr =
-    unaryExprOrTypeTraitExpr(
-      sizeofOp(location=builtIn()),
-      typeNameExpr(typeName(bty, baseTypeExpr())),
-      location=builtIn()
-    );
+    if   returnsVoid
+    then mkIntConst(0, builtIn())
+    else
+      unaryExprOrTypeTraitExpr(
+        sizeofOp(location=builtIn()),
+        typeNameExpr(typeName(bty, baseTypeExpr())),
+        location=builtIn()
+      );
 
   local frameStructName :: Name = name("_cilk_" ++ fname.name ++ "_frame", location=builtIn());
   local sizeofFrame :: Expr =

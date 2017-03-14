@@ -131,6 +131,26 @@ s::Stmt ::= f::Expr args::Exprs
     | false,false -> error ("We don't think we're in a fast or slow clone!")
     end;
 
+  s.cilkLinks =
+    case fast, slow of
+    | true,false  -> s.cilkLinksInh
+    | false,true  ->
+         cons(
+           init(objectInitializer(
+             foldInit([
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn()))),
+               init(exprInitializer(mkIntConst(0, builtIn())))
+             ])
+           )),
+           s.cilkLinksInh
+         )
+    | true,true   -> error ("We think we're in both a fast and a slow clone!")
+    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    end;
+
   forwards to
     compoundStmt(
       foldStmt([
@@ -527,10 +547,16 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
       ])
     );
 
+  local expandComment :: Stmt =
+    case ml of
+    | justExpr(_)   -> txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */")
+    | nothingExpr() -> txtStmt("/* expand CILK2C_XPOP_FRAME_NORESULT() macro */")
+    end;
+
   forwards to
     compoundStmt(
       foldStmt([
-        txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */"),
+        expandComment,
         mTmpDecl,
         xPopFrameResult
       ])
