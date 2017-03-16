@@ -63,15 +63,15 @@ static inline void Cilk_lock_init(Cilk_lockvar v)
 
 static inline void Cilk_lock(Cilk_lockvar v)
 {
-//     while (Cilk_xchg((int *)v, 1) != 0) {
-//	  while (v[0]);  /* spin using only reads - reduces bus traffic */
-//     }
+     while (Cilk_xchg((volatile int *)v, 1) != 0) {
+	  while (v[0]);  /* spin using only reads - reduces bus traffic */
+     }
 }
 
 static inline void Cilk_unlock(Cilk_lockvar v)
 {
-//     Cilk_membar_StoreStore();
-//     v[0] = 0;
+     Cilk_membar_StoreStore();
+     v[0] = 0;
 }
 
 #endif				/* _CILK_LIB_H */
