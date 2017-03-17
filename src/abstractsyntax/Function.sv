@@ -1242,17 +1242,6 @@ top::Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boo
           ),
           reverse(bodyLinkage)
         )
-        ++ [init(
-            objectInitializer(
-              foldInit([
-                init(exprInitializer(mkIntConst(0, builtIn()))),
-                init(exprInitializer(mkIntConst(0, builtIn()))),
-                init(exprInitializer(mkIntConst(0, builtIn()))),
-                init(exprInitializer(mkIntConst(0, builtIn()))),
-                init(exprInitializer(mkIntConst(0, builtIn())))
-              ])
-            )
-           )]
       )
     );
 

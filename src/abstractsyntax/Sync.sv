@@ -49,6 +49,20 @@ s::Stmt ::= loc::Location
 
   local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
+  s.cilkLinks =
+     cons(
+       init(objectInitializer(
+         foldInit([
+           init(exprInitializer(mkIntConst(0, builtIn()))),
+           init(exprInitializer(mkIntConst(0, builtIn()))),
+           init(exprInitializer(mkIntConst(0, builtIn()))),
+           init(exprInitializer(mkIntConst(0, builtIn()))),
+           init(exprInitializer(mkIntConst(0, builtIn())))
+         ])
+       )),
+       s.cilkLinksInh
+     );
+
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
