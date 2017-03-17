@@ -21,7 +21,7 @@ s::Stmt ::= loc::Location
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
   forwards to case fast,slow of
-    | true,false  -> cilk_fastCloneSync()
+    | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> error ("We don't think we're in a fast or slow clone!")
@@ -29,8 +29,12 @@ s::Stmt ::= loc::Location
 }
 
 abstract production cilk_fastCloneSync
-s::Stmt ::=
+s::Stmt ::= loc::Location
 {
+  -- reserve a sync number
+--  s.syncCount = s.syncCountInh + 1;
+  s.syncLocations = [loc];
+
   -- expand CILK2C_AT_SYNC_FAST() macro
   forwards to
     foldStmt([

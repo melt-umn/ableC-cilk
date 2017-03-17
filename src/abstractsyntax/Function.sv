@@ -74,11 +74,14 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
 -- Slow Clone --------------------------------------------------
 
-  -- `cilk_return;' is always necessary so add it just in case user didn't include it
+  -- TODO: only add implicit sync/return if necessary
+  -- `sync; cilk_return;' is always necessary so add it just in case user didn't include it
   local newBody :: Stmt =
     if   returnsVoid
-    then seqStmt(body, cilk_returnStmt(nothingExpr()))
-    else body;
+    then foldStmt([
+           body, cilk_syncStmt(fname.location), cilk_returnStmt(nothingExpr())
+         ])
+    else foldStmt([body, cilk_syncStmt(fname.location)]);
 
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
   local slowCloneBody :: Stmt = transformSlowClone(newBody, args);
