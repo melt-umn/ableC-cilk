@@ -968,12 +968,16 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 --    );
   fastClone.returnType = body.returnType;
 
+  -- get all name/scopeIds pairs except those at global scope
+  local cilkFrameVars :: [Pair<String String>] =
+    foldr(append, [], map(tm:toList, take(length(top.env.scopeIds)-1, top.env.scopeIds)));
+
   -- TODO: warn if any shadowed variables in cilk frame
-  local fwd :: Stmt = fastClone;
---  local fwd :: Stmt =
---    if   frameContainsShadow(top.env)
---    then warnStmt([err(builtIn(), "shadowing variable names is currently not supported")])
---    else fastClone;
+--  local fwd :: Stmt = fastClone;
+  local fwd :: Stmt =
+    if   frameContainsShadow(cilkFrameVars)
+    then warnStmt([err(builtIn(), "shadowing variable names in cilk functions is currently not supported")])
+    else fastClone;
 
   forwards to
     fwd
@@ -1081,20 +1085,20 @@ top::Stmt ::= newName::Name
     ]);
 }
 
---function frameContainsShadow
---Boolean ::= cilkFrameVars::[Pair<Name Integer>]
---{
---  return
---    if   null(cilkFrameVars)
---    then false
---    else containsBy(pairFstNameEq, head(cilkFrameVars), tail(cilkFrameVars))
---           || frameContainsShadow(tail(cilkFrameVars));
---}
-
-function pairFstNameEq
-Boolean ::= l::Pair<Name a> r::Pair<Name a>
+function frameContainsShadow
+Boolean ::= cilkFrameVars::[Pair<String String>]
 {
-  return fst(l).name == fst(r).name;
+  return
+    if   null(cilkFrameVars)
+    then false
+    else containsBy(pairFstStringEq, head(cilkFrameVars), tail(cilkFrameVars))
+           || frameContainsShadow(tail(cilkFrameVars));
+}
+
+function pairFstStringEq
+Boolean ::= l::Pair<String a> r::Pair<String a>
+{
+  return fst(l) == fst(r);
 }
 
 abstract production slowClone
