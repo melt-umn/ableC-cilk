@@ -524,6 +524,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local retStmt :: Stmt =
     case ml of
     | justExpr(_)   ->
+--        if isSlow || returnsVoid
         if isSlow
         then txtStmt("return;")
         else txtStmt("return 0;")
