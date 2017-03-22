@@ -3275,6 +3275,7 @@ cilk int main(int argc, char **argv)
      else
 	  spawn test_speed(size);
 
+     sync;
      cilk_return 0;
 }
 
