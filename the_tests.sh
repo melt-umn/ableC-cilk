@@ -10,7 +10,7 @@ cd artifact
 
 # this currently 'works' but reports errors and thus fails
 cd ../examples
-./compile_fib_xc.sh
+./compile.sh fib.xc
 
 ./a.out -nproc 6 30
 
