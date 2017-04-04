@@ -6,3 +6,8 @@ build.xml
 
 *.pp_out.c
 *.gen_cpp
+
+*.cilk[ci]
+
+a.out
+*.step1.xc

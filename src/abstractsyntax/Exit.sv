@@ -14,7 +14,7 @@ s::Stmt ::= me::MaybeExpr
     case me.justTheExpr of
     | just(e)   -> consExpr(e, nilExpr())
     -- TODO: do we really want to default to exit 0?
-    | nothing() -> consExpr(mkIntConst(0, builtIn()), nilExpr())
+    | nothing() -> consExpr(mkIntConst(0, bogusLoc()), nilExpr())
     end;
   retval.env = s.env;
 
@@ -22,10 +22,10 @@ s::Stmt ::= me::MaybeExpr
   forwards to
     doStmt(
       cilkSpawnStmtNoEqOp(
-        declRefExpr(name("Cilk_really_exit", location=builtIn()), location=builtIn()),
+        declRefExpr(name("Cilk_really_exit", location=bogusLoc()), location=bogusLoc()),
         retval
       ),
-      mkIntConst(0, builtIn())
+      mkIntConst(0, bogusLoc())
     );
 }
 

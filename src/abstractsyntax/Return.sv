@@ -12,8 +12,6 @@ r::Stmt ::= e::MaybeExpr
   r.freeVariables = e.freeVariables;
   r.functiondefs := [];
 
---  r.scopeCount = r.scopeCountInh;
---  r.cilkFrameDeclsScopes = r.cilkFrameDeclsScopesInh;
   r.cilkFrameDeclsScopes = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
@@ -87,7 +85,7 @@ r::Stmt ::= me::MaybeExpr
 
   -- TODO: handle return void
   local tmpNameStr :: String = "__tmp" ++ toString(genInt());
-  local tmpName :: Name = name(tmpNameStr, location=builtIn());
+  local tmpName :: Name = name(tmpNameStr, location=bogusLoc());
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls([], [],
@@ -134,6 +132,5 @@ r::Stmt ::= me::MaybeExpr
         returnStmt(nothingExpr())
       ])
     );
-
 }
 

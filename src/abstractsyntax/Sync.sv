@@ -13,8 +13,6 @@ s::Stmt ::= loc::Location
   s.freeVariables = [];
   s.functiondefs := [];
 
---  s.scopeCount = s.scopeCountInh;
---  s.cilkFrameDeclsScopes = s.cilkFrameDeclsScopesInh;
   s.cilkFrameDeclsScopes = [];
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
@@ -32,7 +30,6 @@ abstract production cilk_fastCloneSync
 s::Stmt ::= loc::Location
 {
   -- reserve a sync number
---  s.syncCount = s.syncCountInh + 1;
   s.syncLocations = [loc];
 
   -- expand CILK2C_AT_SYNC_FAST() macro
@@ -48,7 +45,6 @@ abstract production cilk_slowCloneSync
 s::Stmt ::= loc::Location
 {
   -- reserve a sync number
---  s.syncCount = s.syncCountInh + 1;
   s.syncLocations = [loc];
 
   local syncCount :: Integer = lookupSyncCount(loc, s.env);
@@ -57,11 +53,11 @@ s::Stmt ::= loc::Location
      cons(
        init(objectInitializer(
          foldInit([
-           init(exprInitializer(mkIntConst(0, builtIn()))),
-           init(exprInitializer(mkIntConst(0, builtIn()))),
-           init(exprInitializer(mkIntConst(0, builtIn()))),
-           init(exprInitializer(mkIntConst(0, builtIn()))),
-           init(exprInitializer(mkIntConst(0, builtIn())))
+           init(exprInitializer(mkIntConst(0, bogusLoc()))),
+           init(exprInitializer(mkIntConst(0, bogusLoc()))),
+           init(exprInitializer(mkIntConst(0, bogusLoc()))),
+           init(exprInitializer(mkIntConst(0, bogusLoc()))),
+           init(exprInitializer(mkIntConst(0, bogusLoc())))
          ])
        )),
        s.cilkLinksInh
@@ -81,11 +77,11 @@ s::Stmt ::= loc::Location
     ifStmtNoElse(
       -- expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
       directCallExpr(
-        name("Cilk_sync", location=builtIn()),
+        name("Cilk_sync", location=bogusLoc()),
         foldExpr([
-          declRefExpr(name("_cilk_ws", location=builtIn()), location=builtIn())
+          declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc())
         ]),
-        location=builtIn()
+        location=bogusLoc()
       ),
       foldStmt([
         txtStmt("return; _cilk_sync" ++ toString(syncCount) ++ ":;")

@@ -46,10 +46,6 @@ top::Parameters ::= h::ParameterDecl t::Parameters
 {
   top.cilkFrameDeclsScopes =
     cons(h.cilkFrameDeclsScope, t.cilkFrameDeclsScopes);
---    cons(
---      cons(h.cilkFrameDeclsScope, head(t.cilkFrameDeclsScopes)),
---      tail(t.cilkFrameDeclsScopes)
---    );
 }
 
 aspect production nilParameters

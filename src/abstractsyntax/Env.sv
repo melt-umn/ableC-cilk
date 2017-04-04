@@ -2,7 +2,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax;
 
 synthesized attribute scopeIds :: Scope<String> occurs on Env;
 synthesized attribute scopeIdContribs :: Contribs<String> occurs on Defs, Def;
---synthesized attribute scopeId :: String occurs on Env, Decl;
 
 -- TODO: do we need envSyncLocations/Contribs? can envSyncLocationsDef be passed down through addEnv without them?
 synthesized attribute envSyncLocations :: Scope<[Location]> occurs on Env;
@@ -11,7 +10,6 @@ synthesized attribute envSyncLocationsContribs :: Contribs<[Location]> occurs on
 aspect production emptyEnv_i
 top::Env ::=
 {
---  top.scopeId = "0";
   top.scopeIds = [tm:empty(compareString)];
   top.envSyncLocations = [tm:empty(compareString)];
 }
@@ -19,7 +17,6 @@ top::Env ::=
 aspect production addEnv_i
 top::Env ::= d::Defs  e::Decorated Env
 {
---  top.scopeId = e.scopeId;
   top.scopeIds = augmentScope_i(d.scopeIdContribs, e.scopeIds);
   top.envSyncLocations = augmentScope_i(d.envSyncLocationsContribs, e.envSyncLocations);
 }
@@ -27,7 +24,6 @@ top::Env ::= d::Defs  e::Decorated Env
 aspect production openScope_i
 top::Env ::= e::Decorated Env
 {
---  top.scopeId = toString(genInt());
   top.scopeIds = tm:empty(compareString) :: e.scopeIds;
   top.envSyncLocations = tm:empty(compareString) :: e.envSyncLocations;
 }
