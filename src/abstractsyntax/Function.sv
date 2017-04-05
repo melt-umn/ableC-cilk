@@ -7,7 +7,7 @@ imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 aspect production functionDeclaration
 top::Decl ::= f::FunctionDecl
 {
-  top.globalDecls <- [pair("CILK_WHERE_AM_I", inCCode())];
+--  top.globalDecls <- [pair("CILK_WHERE_AM_I", inCCode())];
 }
 
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
@@ -188,8 +188,8 @@ global cilk_sync_locations_id::String = "cilk_sync_locations_id";
      { ... scope <n> vars ... } scope<n>;
    };
 -}
-function makeFrame
-Decl ::= newName::Name args::Parameters body::Stmt
+abstract production makeFrame
+top::Decl ::= newName::Name args::Parameters body::Stmt
 {
   local header :: StructItem =
     structItem(
@@ -207,7 +207,7 @@ Decl ::= newName::Name args::Parameters body::Stmt
   local frameFields :: [StructItem] =
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
 
-  return
+  forwards to
     typeExprDecl([],
       structTypeExpr(
         [],
