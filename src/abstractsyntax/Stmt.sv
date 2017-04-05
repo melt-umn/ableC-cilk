@@ -142,13 +142,3 @@ top::Stmt ::= l::Expr u::Expr s::Stmt
   top.cilkLinks = s.cilkLinks;
 }
 
-aspect production returnStmt
-top::Stmt ::= e::MaybeExpr
-{
-  local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, top.env));
-  top.errors <-
-    if   slow
-    then [err(bogusLoc(), "cannot use standard return in Cilk function, use cilk_return instead")]
-    else [];
-}
-
