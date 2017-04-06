@@ -2982,23 +2982,23 @@ cilk static void fft_aux(int n, COMPLEX * in, COMPLEX * out, int *factors,
      /* special cases */
      if (n == 32) {
 	  fft_base_32(in, out);
-	  cilk_return;
+	  cilk return;
      }
      if (n == 16) {
 	  fft_base_16(in, out);
-	  cilk_return;
+	  cilk return;
      }
      if (n == 8) {
 	  fft_base_8(in, out);
-	  cilk_return;
+	  cilk return;
      }
      if (n == 4) {
 	  fft_base_4(in, out);
-	  cilk_return;
+	  cilk return;
      }
      if (n == 2) {
 	  fft_base_2(in, out);
-	  cilk_return;
+	  cilk return;
      }
      /* 
       * the cases n == 3, n == 5, and maybe 7 should be implemented as well
@@ -3050,7 +3050,7 @@ cilk static void fft_aux(int n, COMPLEX * in, COMPLEX * out, int *factors,
 	  spawn fft_twiddle_gen(0, m, in, out, W, nW, nW / n, r, m);
      sync;
 
-     cilk_return;
+     cilk return;
 }
 
 /*
@@ -3086,7 +3086,7 @@ cilk void cilk_fft(int n, COMPLEX * in, COMPLEX * out)
 
      free(W);
      free(factors);
-     cilk_return;
+     cilk return;
 }
 
 /****************************************************************
@@ -3113,7 +3113,7 @@ cilk void test_fft_elem(int n, int j, COMPLEX * in, COMPLEX * out)
 	  c_im(sum) += c_im(in[i]) * c_re(w) + c_re(in[i]) * c_im(w);
      }
      out[j] = sum;
-     cilk_return;
+     cilk return;
 }
 
 cilk void test_fft(int n, COMPLEX * in, COMPLEX * out);
@@ -3125,7 +3125,7 @@ cilk void test_fft(int n, COMPLEX * in, COMPLEX * out)
 	  spawn test_fft_elem(n, j, in, out);
 
      sync;
-     cilk_return;
+     cilk return;
 }
 
 #define MAX 800
@@ -3252,7 +3252,7 @@ cilk int main(int argc, char **argv)
      get_options(argc, argv, specifiers, opt_types, &size, &correctness, &benchmark, &help);
 
      if (help)
-	  cilk_return usage();
+	  cilk return usage();
 
      if (benchmark) {
 	  switch (benchmark) {
@@ -3276,7 +3276,7 @@ cilk int main(int argc, char **argv)
 	  spawn test_speed(size);
 
      sync;
-     cilk_return 0;
+     cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)

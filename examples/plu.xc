@@ -83,7 +83,7 @@ cilk int column_max(int c, int r1, int r2)
 	       j = k;
      }
 
-     cilk_return j;
+     cilk return j;
 }
 
 /* update the lower rows after pivoting */
@@ -159,7 +159,7 @@ cilk int block_lup(int r, int c)
 	  sync;
 	  Ri += BLOCK_SIZE;
      }
-     cilk_return 0;
+     cilk return 0;
 }
 
 /* block schur's complement
@@ -414,7 +414,7 @@ cilk int main(int argc, char **argv)
      get_options(argc, argv, specifiers, opt_types, &n, &benchmark, &help);
 
      if (help)
-	  cilk_return usage();
+	  cilk return usage();
 
      if (benchmark) {
 	  switch (benchmark) {
@@ -458,7 +458,7 @@ cilk int main(int argc, char **argv)
      free(P);
      free(A);
 
-     cilk_return 0;
+     cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)

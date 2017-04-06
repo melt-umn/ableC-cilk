@@ -97,16 +97,16 @@ cilk int knapsack(struct item *e, int c, int n, int v)
 
      /* base case: full knapsack or no items */
      if (c < 0)
-	  cilk_return INT_MIN;
+	  cilk return INT_MIN;
 
      if (n == 0 || c == 0)
-	  cilk_return v;		/* feasible solution, with value v */
+	  cilk return v;		/* feasible solution, with value v */
 
      ub = (double) v + c * e->value / e->weight;
 
      if (ub < best_so_far) {
 	  /* prune ! */
-	  cilk_return INT_MIN;
+	  cilk return INT_MIN;
      }
      /* 
       * compute the best solution without the current item in the knapsack 
@@ -130,7 +130,7 @@ cilk int knapsack(struct item *e, int c, int n, int v)
      if (best > best_so_far)
 	  best_so_far = best;
 
-     cilk_return best;
+     cilk return best;
 }
 
 int usage(void)
@@ -166,7 +166,7 @@ cilk int cilk_main(int argc, char **argv)
      get_options(argc, argv, specifiers, opt_types, filename, &benchmark, &help);
 
      if (help)
-	  cilk_return usage();
+	  cilk return usage();
 
      if (benchmark) {
 	  switch (benchmark) {
@@ -182,7 +182,7 @@ cilk int cilk_main(int argc, char **argv)
 	  }
      }
      if (read_input((const char *)filename, items, &capacity, &n))
-	  cilk_return 1;
+	  cilk return 1;
 
      /* Timing. "Start" timers */
      sync;
@@ -206,7 +206,7 @@ cilk int cilk_main(int argc, char **argv)
      printf("Work          = %4f s\n", Cilk_time_to_sec(wk_elapsed));
      printf("Critical path = %4f s\n\n", Cilk_time_to_sec(cp_elapsed));
 
-     cilk_return 0;
+     cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)

@@ -8,7 +8,7 @@ int i = 0;
 
 cilk void func(void) {
      i++;
-     cilk_return;
+     cilk return;
 }
 
 cilk void main(void) {
@@ -22,6 +22,6 @@ cilk void main(void) {
      } else {
 	  printf("test_func_no_arg_no_ret BAD\n");
      }
-     cilk_return;
+     cilk return;
 }
 

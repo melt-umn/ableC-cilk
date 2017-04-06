@@ -32,13 +32,13 @@ cilk int fib(int n);
 cilk int fib(int n)
 {
      if (n < 2)
-	  cilk_return (n);
+	  cilk return (n);
      else {
 	  int x, y;
 	  spawn x = fib(n - 1);
 	  spawn y = fib(n - 2);
 	  sync;
-	  cilk_return (x + y);
+	  cilk return (x + y);
      }
 }
 
@@ -60,5 +60,5 @@ cilk int main(int argc, char **argv)
      }
 
      printf("Result: %d\n", result);
-     cilk_return 0;
+     cilk return 0;
 }

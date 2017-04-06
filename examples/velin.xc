@@ -4,7 +4,7 @@
 int a;
 
 cilk int refine(void) {
-	cilk_return 999;
+	cilk return 999;
 }
 
 cilk int main(void) {
@@ -19,5 +19,5 @@ cilk int main(void) {
 		printf("velin BAD\n");
 	}
 
-	cilk_return 0;
+	cilk return 0;
 }

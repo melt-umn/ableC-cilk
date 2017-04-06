@@ -56,9 +56,9 @@ cilk int main(void)
 
      if (n == N) {
 	  printf("OK\n");
-	  cilk_return 0;
+	  cilk return 0;
      } else {
 	  printf("BAD %d %d\n", n, N * 2);
-	  cilk_return -1;
+	  cilk return -1;
      }
 }

@@ -197,7 +197,7 @@ cilk int main(int argc, char **argv)
      free(C1);
      free(B);
      free(A);
-     cilk_return 0;
+     cilk return 0;
 }
 
 #ifndef RAND_MAX

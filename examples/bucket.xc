@@ -181,7 +181,7 @@ cilk int scan_up(int idx)
 	  sync;
       scan_tree[idx] += a + b;
      }
-     cilk_return scan_tree[idx];
+     cilk return scan_tree[idx];
 }
 
 /*
@@ -213,7 +213,7 @@ cilk void scan_down(int idx, int sum)
 	  spawn scan_down(R_CHILD(idx), scan_tree[L_CHILD(idx)] + sum);
 	  sync;
      }
-     cilk_return;
+     cilk return;
 }
 
 int usage(void)
@@ -243,7 +243,7 @@ cilk int main(int argc, char **argv)
      get_options(argc, argv, specifiers, opt_types, &n, &benchmark, &help);
 
      if (help)
-	  cilk_return usage();
+	  cilk return usage();
 
      if (benchmark) {
 	  switch (benchmark) {
@@ -260,14 +260,14 @@ cilk int main(int argc, char **argv)
      }
      /* alloc memory */
      if ((array = malloc(n * sizeof(float))) == NULL)
-	   cilk_return 3;
+	   cilk return 3;
      if ((buckets = calloc(n, sizeof(bucket))) == NULL)
-	  cilk_return 4;
+	  cilk return 4;
      if ((elems = malloc(n * sizeof(elem))) == NULL)
-	  cilk_return 5;
+	  cilk return 5;
      INIT_TREE(n, scan_tree, BASE, scan_tree_internals);
      if (scan_tree == NULL)
-	  cilk_return 6;
+	  cilk return 6;
 
      /* init locks */
      for (i = 0; i < n; i++)
@@ -320,7 +320,7 @@ cilk int main(int argc, char **argv)
      free(buckets);
      free(elems);
      free(array);
-     cilk_return 0;
+     cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)

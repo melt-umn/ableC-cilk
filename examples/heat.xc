@@ -158,7 +158,7 @@ divide(int lb, int ub, double **new, double **old, int mode, int timestep)
     spawn l = divide(lb, (ub + lb) / 2, new, old, mode, timestep);
     spawn r = divide((ub + lb) / 2, ub, new, old, mode, timestep);
     sync;
-    cilk_return (l + r);
+    cilk return (l + r);
   } else {
     switch (mode) {
     case COMP:
@@ -166,18 +166,18 @@ divide(int lb, int ub, double **new, double **old, int mode, int timestep)
 	compstripe(new, old, lb, ub);
       else
 	compstripe(old, new, lb, ub);
-      cilk_return 1;
+      cilk return 1;
       
     case ALLC:
       allcgrid(new, old, lb, ub);
-      cilk_return 1;
+      cilk return 1;
       
     case INIT:
       initgrid(old, lb, ub);
-      cilk_return 1;
+      cilk return 1;
     }
   }
-  cilk_return 0;
+  cilk return 0;
 }
 
 
@@ -263,7 +263,7 @@ heat(void)
   me = me / (nx * ny);
   printf("\n   Global Mean absolute error    %10e\n\n", me);
 #endif
-  cilk_return 0;
+  cilk return 0;
 }
 
 int
@@ -334,7 +334,7 @@ main(int argc, char **argv)
 
   get_options(argc, argv, specifiers, opt_types, &leafmaxcol, &nx, &ny, &nt, &xu, &xo, &yu, &yo, &tu, &to, filename, &benchmark, &help);
 
-  if (help) cilk_return usage();
+  if (help) cilk return usage();
 
   if (benchmark) {
     switch (benchmark) {
@@ -409,7 +409,7 @@ main(int argc, char **argv)
   printf("Work          = %4f s\n", Cilk_time_to_sec(wk_elapsed));
   printf("Critical path = %4f s\n\n", Cilk_time_to_sec(cp_elapsed));
 
-  cilk_return 0;
+  cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)

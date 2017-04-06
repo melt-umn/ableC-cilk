@@ -329,11 +329,11 @@ cilk void cilkmerge(ELM *low1, ELM *high1, ELM *low2,
      if (high1 < low1) {
 	  /* smaller range is empty */
 	  memcpy(lowdest, low2, sizeof(ELM) * (high2 - low2));
-	  cilk_return;
+	  cilk return;
      }
      if (high2 - low2 < MERGESIZE) {
 	  seqmerge(low1, high1, low2, high2, lowdest);
-	  cilk_return;
+	  cilk return;
      }
      /*
       * Basic approach: Find the middle element of one range (indexed by
@@ -357,7 +357,7 @@ cilk void cilkmerge(ELM *low1, ELM *high1, ELM *low2,
 		     lowdest + lowsize + 2);
 
      sync;
-     cilk_return;
+     cilk return;
 }
 
 cilk void cilksort(ELM *low, ELM *tmp, long size);
@@ -377,7 +377,7 @@ cilk void cilksort(ELM *low, ELM *tmp, long size)
      if (size < QUICKSIZE) {
 	  /* quicksort when less than 1024 elements */
 	  seqquick(low, low + size - 1);
-	  cilk_return;
+	  cilk return;
      }
      A = low;
      tmpA = tmp;
@@ -461,7 +461,7 @@ cilk int main(int argc, char **argv)
      get_options(argc, argv, specifiers, opt_types, &size, &benchmark, &help);
 
      if (help)
-	  cilk_return usage();
+	  cilk return usage();
 
      if (benchmark) {
 	  switch (benchmark) {
@@ -514,7 +514,7 @@ cilk int main(int argc, char **argv)
 
      free(array);
      free(tmp);
-     cilk_return 0;
+     cilk return 0;
 }
 
 void get_options(int argc, char *argv[], char *specs[], int *types,...)
