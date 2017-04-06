@@ -15,28 +15,16 @@ imports edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 marking terminal Cilk_t 'cilk' lexer classes {Ckeyword};
 
 concrete production cilk_func_c
-top::Stmt_c ::= 'cilk' rhs::CilkRhs_c
+top::Declaration_c ::= 'cilk' f::CilkFunctionDefinition_c
 {
-  top.ast = rhs.ast;
+  top.ast = f.ast;
 }
 
-
-closed nonterminal CilkRhs_c with location, ast<abs:Stmt>;
-concrete productions top::CilkRhs_c
-| f::CilkFunctionDefinition_c
-  {
-    top.ast = f.ast;
-  }
-| rb::ReturnBody
-  {
-    top.ast = rb.ast;
-  }
-
-closed nonterminal CilkFunctionDefinition_c with location, ast<abs:Stmt>;
+closed nonterminal CilkFunctionDefinition_c with location, ast<abs:Decl>;
 concrete productions top::CilkFunctionDefinition_c
 | d::CilkInitialFunctionDefinition_c  s::CompoundStatement_c
   {
-    top.ast = abs:declStmt(d.ast);
+    top.ast = d.ast;
     d.givenStmt = s.ast;
   }
   action {
@@ -50,11 +38,9 @@ concrete productions top::CilkFunctionDefinition_c
       abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
     top.ast =
-      abs:declStmt(
-        cilkFunctionProto(
-          ds.storageClass, ds.specialSpecifiers, bt, d.ast,
-          d.declaredIdent, ds.attributes
-        )
+      cilkFunctionProto(
+        ds.storageClass, ds.specialSpecifiers, bt, d.ast,
+        d.declaredIdent, ds.attributes
       );
   }
 
@@ -91,6 +77,12 @@ concrete productions top::CilkInitialFunctionDefinition_c
       -- (i.e. LALR conflicts)
       context = lh:beginFunctionScope(d.declaredIdent, d.declaredParamIdents, context);
     }
+
+concrete production cilk_return_c
+top::Stmt_c ::= 'cilk' rb::ReturnBody
+{
+  top.ast = rb.ast;
+}
 
 nonterminal ReturnBody with location, ast<abs:Stmt> ;
 concrete productions rb::ReturnBody
