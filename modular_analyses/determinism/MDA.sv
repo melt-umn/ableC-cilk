@@ -6,8 +6,12 @@ copper_mda testCilkSpawn(ablecParser) {
   edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:spawnStmt;
 }
 
-copper_mda testCilk(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:cilk;
+copper_mda testCilkFunction(ablecParser) {
+  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:functionDef;
+}
+
+copper_mda testCilkReturn(ablecParser) {
+  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:returnStmt;
 }
 
 copper_mda testCilkSync(ablecParser) {

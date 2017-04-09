@@ -1,4 +1,4 @@
-grammar edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:cilk;
+grammar edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:functionDef;
 
 -- Import host language components
 imports edu:umn:cs:melt:ableC:concretesyntax;
@@ -6,13 +6,11 @@ imports edu:umn:cs:melt:ableC:concretesyntax:lexerHack as lh;
 imports edu:umn:cs:melt:ableC:abstractsyntax as abs;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 
-
 -- Some library utilities and the Cilk abstract syntax
 imports silver:langutil;
 imports edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 
-
-marking terminal Cilk_t 'cilk' lexer classes {Ckeyword};
+exports edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:cilkKeyword;
 
 concrete production cilk_func_c
 top::Declaration_c ::= 'cilk' f::CilkFunctionDefinition_c
@@ -77,17 +75,4 @@ concrete productions top::CilkInitialFunctionDefinition_c
       -- (i.e. LALR conflicts)
       context = lh:beginFunctionScope(d.declaredIdent, d.declaredParamIdents, context);
     }
-
-concrete production cilk_return_c
-top::Stmt_c ::= 'cilk' rb::ReturnBody
-{
-  top.ast = rb.ast;
-}
-
-nonterminal ReturnBody with location, ast<abs:Stmt> ;
-concrete productions rb::ReturnBody
-| 'return' ';'
-    { rb.ast = cilk_returnStmt(abs:nothingExpr()); }
-| 'return' rv::Expr_c ';'
-    { rb.ast = cilk_returnStmt(abs:justExpr(rv.ast)); }
 
