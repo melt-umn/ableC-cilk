@@ -1,4 +1,4 @@
-grammar edu:umn:cs:melt:exts:ableC:cilk:modular_analyses:well_definedness ;
+grammar well_definedness;
 
 {- This Silver specification does not generate a useful working 
    compiler, it only serves as a grammar for running the modular

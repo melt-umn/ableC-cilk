@@ -26,7 +26,7 @@ echo "int START_OF_XC_CODE = 1;" > fib.marker
 
 cat fib.includes_for_xc fib.marker $basefilename.xc > $basefilename.step1.xc
 
-java -jar ../artifact/ableC.jar $basefilename.step1.xc -I/usr/local/include/cilk
+java -jar ableC.jar $basefilename.step1.xc -I/usr/local/include/cilk
 
 # TODO: decide whether steps 2 and 4 are needed
 
@@ -55,6 +55,7 @@ gcc -xc \
     -I/usr/local/include/cilk \
     -D__REENTRANT \
     -O2 $basefilename.step1.pp_out.c  \
+    -o $basefilename.out \
     -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
     -Wl,-rpath,/usr/local/lib -pthread -lm
 

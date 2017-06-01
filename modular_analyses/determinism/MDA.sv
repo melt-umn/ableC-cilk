@@ -1,25 +1,25 @@
-grammar edu:umn:cs:melt:exts:ableC:cilk:modular_analyses:determinism;
+grammar determinism;
 
 import edu:umn:cs:melt:ableC:host only ablecParser;
 
 copper_mda testCilkSpawn(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:spawnStmt;
+  edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:spawnStmt;
 }
 
 copper_mda testCilkFunction(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:functionDef;
+  edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:functionDef;
 }
 
 copper_mda testCilkReturn(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:returnStmt;
+  edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:returnStmt;
 }
 
 copper_mda testCilkSync(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:syncStmt;
+  edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:syncStmt;
 }
 
 copper_mda testCilkExit(ablecParser) {
-  edu:umn:cs:melt:exts:ableC:cilk:src:concretesyntax:exitStmt;
+  edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:exitStmt;
 }
 
 
