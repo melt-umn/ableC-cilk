@@ -28,6 +28,13 @@ top::Env ::= e::Decorated Env
   top.envSyncLocations = tm:empty(compareString) :: e.envSyncLocations;
 }
 
+aspect production globalEnv_i
+top::Env ::= e::Decorated Env
+{
+  top.scopeIds = [last(e.scopeIds)];
+  top.envSyncLocations = [last(e.envSyncLocations)];
+}
+
 aspect production nilDefs
 top::Defs ::=
 {

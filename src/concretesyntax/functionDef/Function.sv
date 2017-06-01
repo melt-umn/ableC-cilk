@@ -64,10 +64,10 @@ concrete productions top::CilkInitialFunctionDefinition_c
     {
       d.givenType = abs:baseTypeExpr();
       local bt :: abs:BaseTypeExpr =
-        abs:figureOutTypeFromSpecifiers(d.location, [], [], [], []);
+        abs:figureOutTypeFromSpecifiers(d.location, abs:nilQualifier(), [], [], []);
 
       top.ast =
-        cilkFunctionDecl([], [], bt, d.ast, d.declaredIdent, [], abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl([], [], bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility

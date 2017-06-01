@@ -3,7 +3,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:src:abstractsyntax ;
 abstract production cilk_returnStmt
 r::Stmt ::= e::MaybeExpr
 {
-  r.pp = concat ([ text("cilk"), space(), text("return"), space(), parens(e.pp) ]);
+  r.pp = ppConcat ([ text("cilk"), space(), text("return"), space(), parens(e.pp) ]);
 
   -- r.env depends on these, if not set then compiler will crash while looping
   --  in forwarded returnStmt to look for these
@@ -88,13 +88,13 @@ r::Stmt ::= me::MaybeExpr
   local tmpName :: Name = name(tmpNameStr, location=bogusLoc());
   local tmpDecl :: Stmt =
     declStmt(
-      variableDecls([], [],
+      variableDecls([], nilAttribute(),
         directTypeExpr(e.typerep),
         foldDeclarator([
           declarator(
             tmpName,
             baseTypeExpr(),
-            [],
+            nilAttribute(),
             justInitializer(exprInitializer(e))
           )
         ])

@@ -4,7 +4,7 @@ imports silver:util:raw:treemap as tm;
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
-  s.pp = concat([ text("spawn"), space(), l.pp, space(), op.pp, space(),
+  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   -- s.env depends on these, if not set then compiler will crash while looping
@@ -72,7 +72,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 abstract production cilkSpawnStmtNoEqOp
 s::Stmt ::= f::Expr args::Exprs
 {
-  s.pp = concat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
+  s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
@@ -232,7 +232,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
          txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
 
   local frameTypeExpr :: BaseTypeExpr =
-    tagReferenceTypeExpr([], structSEU(), frameName);
+    tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName);
 
   -- expand CILK_OFFSETOF(struct _cilk_func_frame, scopeX.l) to
   -- ((size_t) ((char *)&((struct _cilk_func_frame *) 0)->scopeX.l - (char *)((struct _cilk_func_frame *) 0)))
@@ -357,13 +357,13 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=bogusLoc());
   local tmpDecl :: Stmt =
     declStmt(
-      variableDecls([], [],
+      variableDecls([], nilAttribute(),
         directTypeExpr(l.typerep),
         foldDeclarator([
           declarator(
             tmpName,
             baseTypeExpr(),
-            [],
+            nilAttribute(),
             nothingInitializer()
           )
         ])

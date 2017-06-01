@@ -24,7 +24,7 @@ top::Declarators ::=
 }
 
 aspect production declarator
-top::Declarator ::= name::Name ty::TypeModifierExpr attrs::[Attribute]
+top::Declarator ::= name::Name ty::TypeModifierExpr attrs::Attributes
                     initializer::MaybeInitializer
 {
   top.scopeId = toString(name.location.line);
@@ -55,7 +55,7 @@ top::Parameters ::=
 }
 
 aspect production parameterDecl
-top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::[Attribute]
+top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
 {
   local n :: Name =
     case name.maybename of
@@ -72,7 +72,7 @@ top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifi
         attrs,
         bty,
         foldStructDeclarator([
-          structField(n, mty, [])
+          structField(n, mty, nilAttribute())
         ])
       )
     );
