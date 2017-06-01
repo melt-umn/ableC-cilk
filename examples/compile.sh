@@ -46,15 +46,10 @@ java -jar ableC.jar $basefilename.step1.xc -I/usr/local/include/cilk
 
 # Step 5
 # compile resulting C file.
-#gcc -xc \
-#    -I/usr/local/include/cilk \
-#    -D__REENTRANT \
-#    -O2 fib.includes.pp_out.c  \
-#    -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread
 gcc -xc \
     -I/usr/local/include/cilk \
     -D__REENTRANT \
-    -O2 $basefilename.step1.pp_out.c  \
+    -O2 $basefilename.step1.c  \
     -o $basefilename.out \
     -L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
     -Wl,-rpath,/usr/local/lib -pthread -lm
