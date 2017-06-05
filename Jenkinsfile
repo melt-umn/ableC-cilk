@@ -47,7 +47,7 @@ node {
 
     /* the full path to ableC, use parameter as-is if changed from default,
      * otherwise prepend full path to workspace */
-    def ablec_base = (ABLEC_BASE == 'ableC') ? "${WORKSPACE}/${ABLEC_BASE}" : ABLEC_BASE
+    def ablec_base = (params.ABLEC_BASE == 'ableC') ? "${WORKSPACE}/${params.ABLEC_BASE}" : params.ABLEC_BASE
     def include_grammars = "-I ${ablec_base} -I ${WORKSPACE}/grammars"
 
     /* stages are pretty much just labels about what's going on */
@@ -71,7 +71,7 @@ node {
                ])
 
       /* env.PATH is the master's path, not the executor's */
-      withEnv(["PATH=${SILVER_BASE}/support/bin/:${env.PATH}"]) {
+      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
         dir("examples") {
           sh "silver -G ${WORKSPACE} -o ableC.jar ${include_grammars} artifact"
         }
@@ -79,7 +79,7 @@ node {
     }
     
     stage ("Modular Analyses") {
-      withEnv(["PATH=${SILVER_BASE}/support/bin/:${env.PATH}"]) {
+      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
         dir("modular_analyses") {
           sh "silver -G ${WORKSPACE} -o MDA.jar ${include_grammars} --clean determinism"
           sh "silver -G ${WORKSPACE} -o MWDA.jar ${include_grammars} --clean --warn-all --warn-error well_definedness"
@@ -88,13 +88,13 @@ node {
     }
 
     stage ("Examples") {
-      withEnv(["PATH=${SILVER_BASE}/support/bin/:${env.PATH}"]) {
+      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
         sh "make examples"
       }
     }
 
 //    stage ("Test") {
-//      withEnv(["PATH=${SILVER_BASE}/support/bin/:${env.PATH}"]) {
+//      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
 //        dir("test") {
 //          sh "silver -G ${WORKSPACE} -o ableC.jar ${include_grammars} artifact"
 //          sh "make"
