@@ -533,7 +533,7 @@ Decl ::= fname::Name body::Stmt
       parameterDecl(
         [],
         typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=bogusLoc())),
-        pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+        pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
         justName(name("_cilk_ws", location=bogusLoc())),
         nilAttribute()
       ),
@@ -650,7 +650,7 @@ Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
       parameterDecl(
         [],
         typedefTypeExpr(nilQualifier(), name("CilkContext", location=bogusLoc())),
-        pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+        pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
         justName(name("context", location=bogusLoc())),
         nilAttribute()
       ),
@@ -892,7 +892,7 @@ TypeModifierExpr ::= mty::TypeModifierExpr
     parameterDecl(
       [],
       typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
-      pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+      pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
       justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
       nilAttribute()
     );
@@ -1093,7 +1093,7 @@ Parameters ::= newName::Name
     parameterDecl(
       [],
       typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
-      pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+      pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
       justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
       nilAttribute()
     );
