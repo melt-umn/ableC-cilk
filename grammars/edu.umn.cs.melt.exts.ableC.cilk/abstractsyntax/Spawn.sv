@@ -40,10 +40,19 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
     case fast,slow of
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
     | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, callF)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    | true,true   -> error ("We think we're in both a fast and a slow clone!1")
+    | false,false -> error ("We don't think we're in a fast or slow clone!2")
     end;
 
+  -- this causes sync to fail because lookupMisc(cilk_in_fast_clone) fails
+  --s.errors := [];
+
+  -- this raise error the 'count_matches' is not declared
+  --s.errors := f.errors ++ args.errors ;
+
+  -- not defining s.errors computes it on forwards-to tree and results
+  -- in same error as above when we collect errors from f and args
+  
   forwards to
     foldStmt([
       setHeaderEntry,
@@ -109,8 +118,8 @@ s::Stmt ::= f::Expr args::Exprs
     case fast, slow of
     | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr(), f.location)
     | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    | true,true   -> error ("We think we're in both a fast and a slow clone!3")
+    | false,false -> error ("We don't think we're in a fast or slow clone!4")
     end;
 
   s.cilkLinks =

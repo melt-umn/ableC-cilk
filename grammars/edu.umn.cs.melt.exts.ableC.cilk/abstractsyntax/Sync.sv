@@ -21,8 +21,8 @@ s::Stmt ::= loc::Location
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    | true,true   -> error ("We think we're in both a fast and a slow clone!5")
+    | false,false -> error ("We don't think we're in a fast or slow clone!6")
     end;
 }
 

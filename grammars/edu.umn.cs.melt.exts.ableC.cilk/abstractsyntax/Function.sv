@@ -924,6 +924,16 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.freeVariables = [];
   top.functiondefs := [];
 
+  body.env =
+        addEnv(
+          [
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+          ],
+          top.env
+        );
+
+
   local fastClone :: Stmt =
     foldStmt([
       addFastStuff(newName),
