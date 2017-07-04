@@ -15,8 +15,13 @@ aspect default production
 top::Stmt ::=
 {
   top.syncLocations = [];
-  top.cilkFrameDeclsScopes = [];
   top.cilkLinks = top.cilkLinksInh;
+}
+
+aspect production nullStmt
+top::Stmt ::=
+{
+  top.cilkFrameDeclsScopes = [];
 }
 
 aspect production seqStmt
@@ -36,6 +41,12 @@ top::Stmt ::= s::Stmt
   top.syncLocations = s.syncLocations;
   top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
   top.cilkLinks = s.cilkLinks;
+}
+
+aspect production warnStmt
+top::Stmt ::= msg::[Message]
+{
+  top.cilkFrameDeclsScopes = [];
 }
 
 aspect production declStmt
@@ -153,5 +164,53 @@ aspect production exprStmt
 top::Stmt ::= d::Expr
 {
   top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production txtStmt
+s::Stmt ::= txt::String
+{
+  s.cilkFrameDeclsScopes = [];
+}
+
+aspect production asmStmt
+top::Stmt ::= asm::AsmStatement
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production functionDeclStmt
+top::Stmt ::= d::FunctionDecl
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production breakStmt
+top::Stmt ::=
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production continueStmt
+top::Stmt ::=
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production gotoStmt
+top::Stmt ::= l::Name
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production returnStmt
+top::Stmt ::= e::MaybeExpr
+{
+  top.cilkFrameDeclsScopes = case e of justExpr(e1) -> e1.cilkFrameDeclsScopes | nothingExpr() -> [] end;
+}
+
+aspect production injectGlobalDeclsStmt
+top::Stmt ::= decls::Decls lifted::Stmt
+{
+  top.cilkFrameDeclsScopes = lifted.cilkFrameDeclsScopes;
 }
 
