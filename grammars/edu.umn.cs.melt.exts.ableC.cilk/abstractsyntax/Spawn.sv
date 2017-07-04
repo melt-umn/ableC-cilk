@@ -36,6 +36,13 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
     | _               -> callExpr(f, newArgs, location=bogusLoc())
     end;
 
+  s.errors := case fast,slow of
+    | true,false  -> forward.errors
+    | false,true  -> forward.errors
+    | true,true   -> []
+    | false,false -> []
+    end;
+
   local spawnStmt :: Stmt =
     case fast,slow of
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
@@ -113,6 +120,13 @@ s::Stmt ::= f::Expr args::Exprs
 
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
+
+  s.errors := case fast,slow of
+    | true,false  -> forward.errors
+    | false,true  -> forward.errors
+    | true,true   -> []
+    | false,false -> []
+    end;
 
   local spawnStmt :: Stmt =
     case fast, slow of

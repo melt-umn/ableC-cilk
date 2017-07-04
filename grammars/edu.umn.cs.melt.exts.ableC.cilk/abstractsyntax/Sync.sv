@@ -18,6 +18,13 @@ s::Stmt ::= loc::Location
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, s.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, s.env));
 
+  s.errors := case fast,slow of
+    | true,false  -> forward.errors
+    | false,true  -> forward.errors
+    | true,true   -> []
+    | false,false -> []
+    end;
+
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
