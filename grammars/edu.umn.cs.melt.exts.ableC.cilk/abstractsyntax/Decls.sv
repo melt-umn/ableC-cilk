@@ -27,7 +27,10 @@ aspect production declarator
 top::Declarator ::= name::Name ty::TypeModifierExpr attrs::Attributes
                     initializer::MaybeInitializer
 {
-  top.scopeId = toString(name.location.line);
+  top.scopeId =
+    if name.location.line >= 0
+    then toString(name.location.line)
+    else "gen";
   top.defs <- [scopeIdDef(name.name, top.scopeId)];
 
   top.cilkFrameDecl = structField(name, ty, attrs);
