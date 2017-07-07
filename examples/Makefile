@@ -26,6 +26,7 @@ fib.out:	fib.c
 		-L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
 		-Wl,-rpath,/usr/local/lib -pthread -lm
 
+examples:	fib.out
 
 clean:
 	rm -f *~ *.i *.c *.o *.out *.test *.jar *.copperdump.html build.xml ableC.jar
