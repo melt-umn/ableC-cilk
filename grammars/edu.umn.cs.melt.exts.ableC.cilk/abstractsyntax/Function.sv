@@ -24,12 +24,17 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   top.pp = ppConcat([
       terminate(space(), map((.pp), storage)),
-      terminate( space(), map( (.pp), fnquals ) ),
+      terminate( space(), specialSpecifiers.pps ),
       bty.pp, space(), mty.lpp, fname.pp, mty.rpp,
       ppAttributesRHS(attrs), line(),
       terminate(cat(semi(), line()), dcls.pps),
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
+
+  local specialSpecifiers :: SpecialSpecifiers =
+    foldr(consSpecialSpecifier, nilSpecialSpecifier(), fnquals);
+  specialSpecifiers.env = top.env;
+  specialSpecifiers.returnType = top.returnType;
 
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
