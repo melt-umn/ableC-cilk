@@ -1,0 +1,8 @@
+#ifndef __CILK_XH
+#define __CILK_XH
+
+#include <cilk.h>
+#include <cilk-cilk2c-pre.h>
+
+#endif
+

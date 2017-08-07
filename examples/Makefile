@@ -18,10 +18,10 @@ ableC.jar: $(GRAMMAR_SOURCES)
 		     artifact
 
 fib.c:	fib.xc ableC.jar
-	java -jar ableC.jar fib.xc -I/usr/local/include/cilk
+	java -jar ableC.jar fib.xc -I/usr/local/include/cilk -I../include
 
 fib.out:	fib.c
-	gcc -xc -I/usr/local/include/cilk -D__REENTRANT -O2 \
+	gcc -xc -I/usr/local/include/cilk -I../include -D__REENTRANT -O2 \
 		fib.c -o fib.out \
 		-L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
 		-Wl,-rpath,/usr/local/lib -pthread -lm

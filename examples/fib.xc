@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <cilk.h>
-#include <cilk-cilk2c-pre.h>
-
+#include <cilk.xh>
 
 cilk int fib(int n);
 

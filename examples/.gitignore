@@ -1,4 +1,2 @@
 *.c
-*.i
 *.out
-fib.marker
