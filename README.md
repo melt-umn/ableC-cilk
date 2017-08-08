@@ -1,15 +1,23 @@
-# edu.umn.cs.melt.exts.ableC.cilk
+# ableC-cilk
 
 The Cilk parallel programming constructs implemented as a language
 extension to ableC.
 
-# Status
+Run
+```
+make analyses
+```
+to verify that the modular analyses pass.
 
-### What works
-+ in the `examples` directory, running `compile_fib_xc.sh` will
-  compile `fib.xc` in a round-about way.
-  It does require that ableC doesn't parse some header files.
+Then run
+```
+make examples
+```
+to verify them.
 
-  `run_fib.sh` will run the generated `a.out` file.
-    
+The generated `fig.out` in examples can be run as
+```
+./fib.out -nproc 4 33
+```
+to calculate the 33rd Fibonacci number using 4 processors.
 

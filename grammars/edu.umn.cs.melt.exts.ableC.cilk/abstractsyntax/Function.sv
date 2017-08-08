@@ -24,12 +24,17 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   top.pp = ppConcat([
       terminate(space(), map((.pp), storage)),
-      terminate( space(), map( (.pp), fnquals ) ),
+      terminate( space(), specialSpecifiers.pps ),
       bty.pp, space(), mty.lpp, fname.pp, mty.rpp,
       ppAttributesRHS(attrs), line(),
       terminate(cat(semi(), line()), dcls.pps),
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
+
+  local specialSpecifiers :: SpecialSpecifiers =
+    foldr(consSpecialSpecifier, nilSpecialSpecifier(), fnquals);
+  specialSpecifiers.env = top.env;
+  specialSpecifiers.returnType = top.returnType;
 
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
@@ -520,7 +525,7 @@ function makeImportFunction
 Decl ::= fname::Name body::Stmt
 {
   local storage :: [StorageClass] = [staticStorageClass()];
-  local fnquals :: [SpecialSpecifier] = [];
+  local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local bty :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
   local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=bogusLoc());
   local attrs :: Attributes = nilAttribute();
@@ -639,7 +644,7 @@ function makeExportFunction
 Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
 {
   local storage :: [StorageClass] = [];
-  local fnquals :: [SpecialSpecifier] = [];
+  local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local exportProcName :: Name = name("mt_" ++ newName.name, location=bogusLoc());
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
@@ -880,7 +885,7 @@ Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr newName::Name
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([], [], bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
+        functionDecl([], nilSpecialSpecifier(), bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
         )
     ]));
 }
@@ -923,6 +928,16 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.defs := [];
   top.freeVariables = [];
   top.functiondefs := [];
+
+  body.env =
+        addEnv(
+          [
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+          ],
+          top.env
+        );
+
 
   local fastClone :: Stmt =
     foldStmt([
@@ -1079,7 +1094,7 @@ Decl ::= newName::Name dcls::Decls body::Stmt
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([staticStorageClass()], [], void, newParams, slowName, nilAttribute(), dcls, body)
+        functionDecl([staticStorageClass()], nilSpecialSpecifier(), void, newParams, slowName, nilAttribute(), dcls, body)
         )
     ]));
 }

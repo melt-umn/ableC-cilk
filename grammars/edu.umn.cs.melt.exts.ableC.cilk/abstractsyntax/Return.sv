@@ -17,6 +17,13 @@ r::Stmt ::= e::MaybeExpr
   local fast::Boolean = !null(lookupMisc(cilk_in_fast_clone_id, r.env));
   local slow::Boolean = !null(lookupMisc(cilk_in_slow_clone_id, r.env));
 
+  r.errors := case fast,slow of
+    | true,false  -> forward.errors
+    | false,true  -> forward.errors
+    | true,true   -> []
+    | false,false -> []
+    end;
+
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneReturn(e)
     | false,true  -> cilk_slowCloneReturn(e)
