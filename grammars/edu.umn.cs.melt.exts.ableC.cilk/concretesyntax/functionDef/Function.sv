@@ -35,9 +35,12 @@ concrete productions top::CilkFunctionDefinition_c
     local bt :: abs:BaseTypeExpr =
       abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
+    local specialSpecifiers :: abs:SpecialSpecifiers =
+      foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
+
     top.ast =
       cilkFunctionProto(
-        ds.storageClass, ds.specialSpecifiers, bt, d.ast,
+        ds.storageClass, specialSpecifiers, bt, d.ast,
         d.declaredIdent, ds.attributes
       );
   }
@@ -52,8 +55,11 @@ concrete productions top::CilkInitialFunctionDefinition_c
       local bt :: abs:BaseTypeExpr =
         abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
+      local specialSpecifiers :: abs:SpecialSpecifiers =
+        foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
+
       top.ast =
-        cilkFunctionDecl(ds.storageClass, ds.specialSpecifiers, bt, d.ast, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, d.ast, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Function are annoying because we have to open a scope, then add the
@@ -67,7 +73,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         abs:figureOutTypeFromSpecifiers(d.location, abs:nilQualifier(), [], [], []);
 
       top.ast =
-        cilkFunctionDecl([], [], bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility

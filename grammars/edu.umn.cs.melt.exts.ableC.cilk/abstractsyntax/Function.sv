@@ -12,7 +12,7 @@ top::Decl ::= f::FunctionDecl
 
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
 abstract production cilkFunctionDecl
-top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
+top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
   dcls::Decls  body::Stmt
 {
@@ -24,17 +24,15 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   top.pp = ppConcat([
       terminate(space(), map((.pp), storage)),
-      terminate( space(), specialSpecifiers.pps ),
+      terminate( space(), fnquals.pps ),
       bty.pp, space(), mty.lpp, fname.pp, mty.rpp,
       ppAttributesRHS(attrs), line(),
       terminate(cat(semi(), line()), dcls.pps),
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
 
-  local specialSpecifiers :: SpecialSpecifiers =
-    foldr(consSpecialSpecifier, nilSpecialSpecifier(), fnquals);
-  specialSpecifiers.env = top.env;
-  specialSpecifiers.returnType = top.returnType;
+  fnquals.env = top.env;
+  fnquals.returnType = top.returnType;
 
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
@@ -119,7 +117,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 }
 
 abstract production cilkFunctionProto
-top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
+top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
 {
   local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=bogusLoc());
@@ -525,7 +523,7 @@ function makeImportFunction
 Decl ::= fname::Name body::Stmt
 {
   local storage :: [StorageClass] = [staticStorageClass()];
-  local fnquals :: [SpecialSpecifier] = [];
+  local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local bty :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
   local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=bogusLoc());
   local attrs :: Attributes = nilAttribute();
@@ -644,7 +642,7 @@ function makeExportFunction
 Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
 {
   local storage :: [StorageClass] = [];
-  local fnquals :: [SpecialSpecifier] = [];
+  local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local exportProcName :: Name = name("mt_" ++ newName.name, location=bogusLoc());
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
@@ -885,7 +883,7 @@ Decl ::= bty::BaseTypeExpr mty::TypeModifierExpr newName::Name
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([], [], bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
+        functionDecl([], nilSpecialSpecifier(), bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
         )
     ]));
 }
@@ -1094,7 +1092,7 @@ Decl ::= newName::Name dcls::Decls body::Stmt
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([staticStorageClass()], [], void, newParams, slowName, nilAttribute(), dcls, body)
+        functionDecl([staticStorageClass()], nilSpecialSpecifier(), void, newParams, slowName, nilAttribute(), dcls, body)
         )
     ]));
 }
