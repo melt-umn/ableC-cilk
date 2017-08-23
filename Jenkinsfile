@@ -42,20 +42,40 @@ properties([
 
 /* a node allocates an executor to actually do work */
 node {
-	try {
-//    notifyBuild('STARTED')
+  try {
+    // notifyBuild('STARTED')
+
+    def extension_name = "ableC-cilk"
 
     /* the full path to ableC, use parameter as-is if changed from default,
      * otherwise prepend full path to workspace */
     def ablec_base = (params.ABLEC_BASE == 'ableC') ? "${WORKSPACE}/${params.ABLEC_BASE}" : params.ABLEC_BASE
-    def include_grammars = "-I ${ablec_base} -I ${WORKSPACE}/grammars"
+    def env = [
+      "PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}",
+      "ABLEC_BASE=${ablec_base}",
+      "EXTS_BASE=${WORKSPACE}/extensions",
+      "SVFLAGS=-G ${WORKSPACE}/generated"
+    ]
 
     /* stages are pretty much just labels about what's going on */
     stage ("Build") {
+      /* Clean Silver-generated files from previous builds in this workspace */
+      sh "mkdir -p generated"
+      sh "rm -rf generated/* || true"
+
       /* don't check out extension under ableC_Home because doing so would allow
        * the Makefiles to find ableC with the included search paths, but we want
        * to explicitly specify the path to ableC according to ABLEC_BASE */
-      checkout scm
+    checkout([ $class: 'GitSCM',
+               branches: scm.branches,
+               doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+               extensions: [
+                 [ $class: 'RelativeTargetDirectory',
+                   relativeTargetDir: "extensions/${extension_name}"]
+                 ],
+               submoduleCfg: scm.submoduleCfg,
+               userRemoteConfigs: scm.userRemoteConfigs
+             ])
 
       checkout([ $class: 'GitSCM',
                  branches: [[name: '*/develop']],
@@ -71,49 +91,54 @@ node {
                ])
 
       /* env.PATH is the master's path, not the executor's */
-      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
-        dir("examples") {
-          sh "silver -G ${WORKSPACE} -o ableC.jar ${include_grammars} artifact"
+      withEnv(env) {
+        dir("extensions/${extension_name}") {
+          sh "make clean build"
         }
       }
     }
     
-    stage ("Modular Analyses") {
-      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
-        dir("modular_analyses") {
-          sh "silver -G ${WORKSPACE} -o MDA.jar ${include_grammars} --clean determinism"
-          sh "silver -G ${WORKSPACE} -o MWDA.jar ${include_grammars} --clean --warn-all --warn-error well_definedness"
+    stage ("Examples") {
+      withEnv(env) {
+        dir("extensions/${extension_name}") {
+          sh "make examples"
         }
       }
     }
 
-    stage ("Examples") {
-      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
-        sh "make examples"
+    stage ("Modular Analyses") {
+      withEnv(env) {
+        dir("extensions/${extension_name}") {
+          /* use -B option to always run analyses */
+          sh "make -B analyses"
+        }
       }
     }
 
 //    stage ("Test") {
-//      withEnv(["PATH=${params.SILVER_BASE}/support/bin/:${env.PATH}"]) {
-//        dir("test") {
-//          sh "silver -G ${WORKSPACE} -o ableC.jar ${include_grammars} artifact"
-//          sh "make"
+//      withEnv(env) {
+//        dir("extensions/${extension_name}") {
+//          /* use -B option to always run tests */
+//          sh "make -B test"
 //        }
 //      }
 //    }
-	} catch (e) {
-		currentBuild.result = 'FAILURE'
-		throw e
-	} finally {
+  }
+  catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+  }
+  finally {
     def previousResult = currentBuild.previousBuild?.result
 
-		if (currentBuild.result == 'FAILURE') {
-			notifyBuild(currentBuild.result)
-		} else if (currentBuild.result == null &&
-        previousResult && previousResult == 'FAILURE') {
-			notifyBuild('BACK_TO_NORMAL')
+    if (currentBuild.result == 'FAILURE') {
+      notifyBuild(currentBuild.result)
     }
-	}
+    else if (currentBuild.result == null &&
+             previousResult && previousResult == 'FAILURE') {
+      notifyBuild('BACK_TO_NORMAL')
+    }
+  }
 }
 
 /* Slack / email notification
@@ -147,10 +172,10 @@ def notifyBuild(String buildStatus = 'STARTED') {
   slackSend (color: colorCode, message: summary)
 
   emailext(
-      subject: subject,
-      body: details,
-//			to: 'evw@umn.edu',
-      recipientProviders: [[$class: 'CulpritsRecipientProvider']]
-    )
+    subject: subject,
+    body: details,
+    to: 'evw@umn.edu',
+    recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+  )
 }
 
