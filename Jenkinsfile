@@ -115,14 +115,14 @@ node {
       }
     }
 
-//    stage ("Test") {
-//      withEnv(env) {
-//        dir("extensions/${extension_name}") {
-//          /* use -B option to always run tests */
-//          sh "make -B test"
-//        }
-//      }
-//    }
+    stage ("Test") {
+      withEnv(env) {
+        dir("extensions/${extension_name}") {
+          /* use -B option to always run tests */
+          sh "make -B test"
+        }
+      }
+    }
   }
   catch (e) {
     currentBuild.result = 'FAILURE'
