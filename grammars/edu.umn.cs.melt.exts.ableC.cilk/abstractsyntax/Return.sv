@@ -46,8 +46,55 @@ r::Stmt ::= e::MaybeExpr
   local beforeReturnFast :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_BEFORE_RETURN_FAST() macro */"),
-      txtStmt("Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-      txtStmt("Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));")
+      -- Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_before_return_fast_cp", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      ),
+      -- Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_before_return_fast", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            ),
+            unaryExprOrTypeTraitExpr(
+              sizeofOp(location=bogusLoc()),
+              exprExpr(
+                unaryOpExpr(
+                  dereferenceOp(location=bogusLoc()),
+                  declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                  location=bogusLoc()
+                )
+              ),
+              location=bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      )
     ]);
 
   -- ToDo: extract return type of the function from env and use below.
@@ -64,11 +111,15 @@ r::Stmt ::= e::MaybeExpr
                 justInitializer(exprInitializer(e)),
                 e.location),
               beforeReturnFast,
-              txtStmt("return _cilk_tmp;")
+              returnStmt(
+                justExpr(
+                  declRefExpr(name("_cilk_tmp", location=bogusLoc()), location=bogusLoc())
+                )
+              )
             ]
         | nothing() ->
            [ beforeReturnFast,
-             txtStmt("return;") ]
+             returnStmt(nothingExpr()) ]
         end
       )
     );
@@ -110,13 +161,46 @@ r::Stmt ::= me::MaybeExpr
       )
     );
 
-  local setResult :: Stmt = txtStmt("Cilk_set_result(_cilk_ws, &" ++ tmpNameStr ++
-                                    ", sizeof(" ++ tmpNameStr ++ "));");
+  -- Cilk_set_result(_cilk_ws, &tmpName, sizeof(tmpName));
+  local setResult :: Stmt =
+    exprStmt(
+      directCallExpr(
+        name("Cilk_set_result", location=bogusLoc()),
+        foldExpr([
+          declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+          mkAddressOf(declRefExpr(tmpName, location=bogusLoc()), bogusLoc()),
+          unaryExprOrTypeTraitExpr(
+            sizeofOp(location=bogusLoc()),
+            exprExpr(declRefExpr(tmpName, location=bogusLoc())),
+            location=bogusLoc()
+          )
+        ]),
+        location=bogusLoc()
+      )
+    );
 
   local setNoResult :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_SET_NORESULT */"),
-      txtStmt("Cilk_set_result(_cilk_ws, (void *)0, 0);")
+      -- Cilk_set_result(_cilk_ws, (void *)0, 0);
+      exprStmt(
+        directCallExpr(
+          name("Cilk_set_result", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            explicitCastExpr(
+              typeName(
+                directTypeExpr(builtinType(nilQualifier(), voidType())),
+                pointerTypeExpr(nilQualifier(), baseTypeExpr())
+              ),
+              mkIntConst(0, bogusLoc()),
+              location=bogusLoc()
+            ),
+            mkIntConst(0, bogusLoc())
+          ]),
+          location=bogusLoc()
+        )
+      )
     ]);
 
   local mSetResult :: Stmt =
@@ -129,8 +213,55 @@ r::Stmt ::= me::MaybeExpr
   local beforeSlowReturn :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_BEFORE_RETURN_SLOW macro */"),
-      txtStmt("Cilk_cilk2c_before_return_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
-      txtStmt("Cilk_cilk2c_before_return_slow(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));")
+      -- Cilk_cilk2c_before_return_slow_cp(_cilk_ws, &(_cilk_frame->header));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_before_return_slow_cp", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      ),
+      -- Cilk_cilk2c_before_return_slow(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_before_return_slow", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            ),
+            unaryExprOrTypeTraitExpr(
+              sizeofOp(location=bogusLoc()),
+              exprExpr(
+                unaryOpExpr(
+                  dereferenceOp(location=bogusLoc()),
+                  declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                  location=bogusLoc()
+                )
+              ),
+              location=bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      )
     ]);
 
   forwards to
