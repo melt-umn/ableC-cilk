@@ -262,11 +262,58 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
   -- expand CILK_OFFSETOF(struct _cilk_func_frame, scopeX.l) to
   -- ((size_t) ((char *)&((struct _cilk_func_frame *) 0)->scopeX.l - (char *)((struct _cilk_func_frame *) 0)))
   local frameOffset :: Expr =
-    -- TODO: don't use txtExpr for frameOffset
-    txtExpr(
-      "((size_t) ((char *)&((struct " ++ frameName.name ++ " *) 0)->"
-        ++ scopeName.name ++ "." ++ lName.name ++ " - (char *)((struct " ++ frameName.name
-        ++ " *) 0)))",
+    explicitCastExpr(
+      typeName(
+        typedefTypeExpr(nilQualifier(), name("size_t", location=bogusLoc())),
+        baseTypeExpr()
+      ),
+      binaryOpExpr(
+        explicitCastExpr(
+          typeName(
+            builtinTypeExpr(nilQualifier(), signedType(charType())),
+            pointerTypeExpr(nilQualifier(), baseTypeExpr())
+          ),
+          mkAddressOf(
+            memberExpr(
+              memberExpr(
+                explicitCastExpr(
+                  typeName(
+                    tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
+                    pointerTypeExpr(nilQualifier(), baseTypeExpr())
+                  ),
+                  mkIntConst(0, bogusLoc()),
+                  location=bogusLoc()
+                ),
+                true,
+                scopeName,
+                location=bogusLoc()
+              ),
+              false,
+              lName,
+              location=bogusLoc()
+            ),
+            bogusLoc()
+          ),
+          location=bogusLoc()
+        ),
+        numOp(subOp(location=bogusLoc()), location=bogusLoc()),
+        explicitCastExpr(
+          typeName(
+            builtinTypeExpr(nilQualifier(), signedType(charType())),
+            pointerTypeExpr(nilQualifier(), baseTypeExpr())
+          ),
+          explicitCastExpr(
+            typeName(
+              tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
+              pointerTypeExpr(nilQualifier(), baseTypeExpr())
+            ),
+            mkIntConst(0, bogusLoc()),
+            location=bogusLoc()
+          ),
+          location=bogusLoc()
+        ),
+        location=bogusLoc()
+      ),
       location=bogusLoc()
     );
 
