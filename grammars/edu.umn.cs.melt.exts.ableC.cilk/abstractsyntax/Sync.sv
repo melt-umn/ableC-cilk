@@ -51,6 +51,7 @@ s::Stmt ::= loc::Location
 abstract production cilk_slowCloneSync
 s::Stmt ::= loc::Location
 {
+  s.pp = text("sync");
   -- reserve a sync number
   s.syncLocations = [loc];
 

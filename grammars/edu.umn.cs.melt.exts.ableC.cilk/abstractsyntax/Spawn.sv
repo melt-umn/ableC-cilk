@@ -206,6 +206,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
+  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(), callF.pp]);
+
   local lIsGlobal :: Boolean =
     !containsBy(
       stringEq, lName.name,
@@ -283,6 +285,8 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 abstract production cilk_slowCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
+  s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
+
   -- reserve a sync number
   s.syncLocations = [loc];
 
@@ -369,6 +373,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
+  top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
+
   local l :: Expr =
     case ml of
     | justExpr(l1)  -> l1

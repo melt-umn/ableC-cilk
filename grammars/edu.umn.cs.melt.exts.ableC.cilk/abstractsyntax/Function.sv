@@ -22,6 +22,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   bty.givenRefId = nothing();
 
+  mty.baseType = bty.typerep;
+  mty.typeModifiersIn = bty.typeModifiers;
+
   top.pp = ppConcat([
       terminate(space(), map((.pp), storage)),
       terminate( space(), specialSpecifiers.pps ),
@@ -198,6 +201,7 @@ global cilk_sync_locations_id::String = "cilk_sync_locations_id";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
+  top.pp = text("cilkMakeFrame()");
   local header :: StructItem =
     structItem(
       nilAttribute(),
@@ -360,6 +364,7 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
 abstract production makeArgsAndResultStruct
 top::Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
 {
+  top.pp = text("cilkMakeArgsAndResultStruct()");
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=bogusLoc());
   local resultField :: StructItem =
     structItem(
@@ -924,6 +929,7 @@ TypeModifierExpr ::= mty::TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
+  top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
   top.globalDecls := [];
   top.defs := [];
   top.freeVariables = [];
@@ -1127,6 +1133,8 @@ Parameters ::= newName::Name
 abstract production transformSlowClone
 top::Stmt ::= body::Stmt args::Parameters
 {
+  top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
+
   -- top.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   top.globalDecls := [];

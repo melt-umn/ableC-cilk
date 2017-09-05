@@ -82,6 +82,8 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_slowCloneReturn
 r::Stmt ::= me::MaybeExpr
 {
+  r.pp = ppConcat([text("cilk return"), space(), me.pp, semi()]);
+
   local e :: Expr =
     case me of
       justExpr(e1)  -> e1
