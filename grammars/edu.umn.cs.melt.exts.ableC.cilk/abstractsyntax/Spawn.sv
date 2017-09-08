@@ -6,6 +6,7 @@ import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 {
+  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
@@ -90,6 +91,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 abstract production cilkSpawnStmtNoEqOp
 s::Stmt ::= f::Expr args::Exprs
 {
+  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   -- s.env depends on these, if not set then compiler will crash while looping
@@ -208,6 +210,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr op::AssignOp callF::Expr
 {
+  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(), callF.pp]);
 
   local lIsGlobal :: Boolean =
@@ -338,6 +341,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 abstract production cilk_slowCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
+  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
 
   -- reserve a sync number
@@ -428,6 +432,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
+  propagate substituted;
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
 
   local l :: Expr =

@@ -7,6 +7,7 @@ import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 abstract production cilk_syncStmt
 s::Stmt ::= loc::Location
 {
+  propagate substituted;
   s.pp = text("sync");
 
   -- s.env depends on these, if not set then compiler will crash while looping
@@ -54,6 +55,7 @@ s::Stmt ::= loc::Location
 abstract production cilk_slowCloneSync
 s::Stmt ::= loc::Location
 {
+  propagate substituted;
   s.pp = text("sync");
   -- reserve a sync number
   s.syncLocations = [loc];
