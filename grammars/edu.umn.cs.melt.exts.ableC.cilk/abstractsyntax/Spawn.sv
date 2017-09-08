@@ -1,5 +1,7 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 imports silver:util:raw:treemap as tm;
+import edu:umn:cs:melt:ableC:abstractsyntax:construction:parsing;
+import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
@@ -177,20 +179,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
   local beforeSpawnFast :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_BEFORE_SPAWN_FAST() macro */"),
-      txtStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
+      parseStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
-      txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+      parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_AFTER_SPAWN_FAST() macro */"),
-      txtStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-      txtStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      parseStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
+      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
 
   forwards to
@@ -254,7 +256,11 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     if   lIsGlobal
     then nullStmt()
     else
-         txtStmt("_cilk_frame->" ++ scopeName.name ++ "." ++ lName.name ++ " = " ++ lName.name ++ ";");
+      subStmt(
+        [nameSubstitution("_scopeName_", scopeName),
+         nameSubstitution("_lName_", lName)],
+        parseStmt("_cilk_frame->_scopeName_._lName_ = _lName_;")
+      );
 
   local frameTypeExpr :: BaseTypeExpr =
     tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName);
@@ -343,20 +349,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   local beforeSpawnSlow :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
-      txtStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      parseStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
-      txtStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+      parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_AFTER_SPAWN_SLOW() macro */"),
-      txtStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      parseStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local recoveryStmt :: Stmt =
@@ -364,6 +370,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
       mkIntConst(0, bogusLoc()),
       foldStmt([
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;"),
+          -- TODO: replace txtStmt with labelStmt
+--        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=bogusLoc()), nullStmt()),
         restoreVariables(s.env)
       ])
     );
@@ -372,8 +380,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   local atThreadBoundary :: Stmt =
     foldStmt([
       txtStmt("/* expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro */"),
-      txtStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
-      txtStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
+      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
 
   forwards to
@@ -510,9 +518,9 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | justExpr(_)   ->
 --        if isSlow || returnsVoid
         if isSlow
-        then txtStmt("return;")
-        else txtStmt("return 0;")
-    | nothingExpr() -> txtStmt("return;")
+        then parseStmt("return;")
+        else parseStmt("return 0;")
+    | nothingExpr() -> parseStmt("return;")
     end;
 
   local ifExceptionHandler :: Stmt =
@@ -527,7 +535,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
         location=bogusLoc()
       ),
       foldStmt([
-        txtStmt("Cilk_cilk2c_pop(_cilk_ws);"),
+        parseStmt("Cilk_cilk2c_pop(_cilk_ws);"),
         retStmt
       ])
     );
