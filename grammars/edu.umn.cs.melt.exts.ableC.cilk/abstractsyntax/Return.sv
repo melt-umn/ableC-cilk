@@ -45,7 +45,7 @@ r::Stmt ::= e::MaybeExpr
   -- expand CILK2C_START_THREAD_FAST() macro
   local beforeReturnFast :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_RETURN_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_BEFORE_RETURN_FAST() macro", location=bogusLoc())),
       -- Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(
@@ -181,7 +181,7 @@ r::Stmt ::= me::MaybeExpr
 
   local setNoResult :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_SET_NORESULT */"),
+      exprStmt(comment("expand CILK2C_SET_NORESULT", location=bogusLoc())),
       -- Cilk_set_result(_cilk_ws, (void *)0, 0);
       exprStmt(
         directCallExpr(
@@ -212,7 +212,7 @@ r::Stmt ::= me::MaybeExpr
   -- expand CILK2C_BEFORE_RETURN_SLOW() macro
   local beforeSlowReturn :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_RETURN_SLOW macro */"),
+      exprStmt(comment("expand CILK2C_BEFORE_RETURN_SLOW macro", location=bogusLoc())),
       -- Cilk_cilk2c_before_return_slow_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(

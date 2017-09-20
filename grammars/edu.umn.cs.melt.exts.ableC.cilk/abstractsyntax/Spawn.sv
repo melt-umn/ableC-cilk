@@ -180,19 +180,19 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_SPAWN_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_AFTER_SPAWN_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -352,20 +352,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_SPAWN_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_PUSH_FRAME() macro */"),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_AFTER_SPAWN_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
@@ -383,7 +383,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -547,8 +547,8 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 
   local expandComment :: Stmt =
     case ml of
-    | justExpr(_)   -> txtStmt("/* expand CILK2C_XPOP_FRAME_RESULT() macro */")
-    | nothingExpr() -> txtStmt("/* expand CILK2C_XPOP_FRAME_NORESULT() macro */")
+    | justExpr(_)   -> exprStmt(comment("expand CILK2C_XPOP_FRAME_RESULT() macro", location=bogusLoc()))
+    | nothingExpr() -> exprStmt(comment("expand CILK2C_XPOP_FRAME_NORESULT() macro", location=bogusLoc()))
     end;
 
   forwards to

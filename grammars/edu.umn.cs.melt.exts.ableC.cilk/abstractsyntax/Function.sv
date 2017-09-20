@@ -481,7 +481,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      txtStmt("/* TODO: restore only live variables */"),
+      exprStmt(comment("TODO: restore only live variables", location=bogusLoc())),
       foldStmt(map(restoreVariable, cilkFrameVars))
     ]);
 }
@@ -529,7 +529,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      txtStmt("/* TODO: save only live, dirty variables */"),
+      exprStmt(comment("TODO: save only live, dirty variables", location=bogusLoc())),
       foldStmt(map(saveVariable, cilkFrameVars))
     ]);
 }
@@ -1029,7 +1029,7 @@ Stmt ::= newName::Name
   -- declare _cilk_frame and expand CILK2C_INIT_FRAME() macro
   local frameDecl :: Stmt =
     foldStmt([
-      txtStmt("/* declare _cilk_frame and expand CILK2C_INIT_FRAME() macro */"),
+      exprStmt(comment("declare _cilk_frame and expand CILK2C_INIT_FRAME() macro", location=bogusLoc())),
       declStmt(
         variableDecls(
           [],
@@ -1072,7 +1072,7 @@ Stmt ::= newName::Name
   -- expand CILK2C_START_THREAD_FAST() macro
   local startThreadFastCp :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_START_THREAD_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_START_THREAD_FAST() macro", location=bogusLoc())),
       exprStmt(
         directCallExpr(
           name("Cilk_cilk2c_start_thread_fast_cp", location=bogusLoc()),
@@ -1190,7 +1190,7 @@ top::Stmt ::= body::Stmt args::Parameters
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_START_THREAD_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_START_THREAD_SLOW() macro", location=bogusLoc())),
 
       -- Cilk_cilk2c_start_thread_slow_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(

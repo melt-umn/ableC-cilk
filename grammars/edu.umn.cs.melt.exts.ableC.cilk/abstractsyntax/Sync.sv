@@ -46,7 +46,7 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_AT_SYNC_FAST() macro
   forwards to
     foldStmt([
-      txtStmt("/* expand CILK2C_AT_SYNC_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -79,7 +79,7 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_BEFORE_SYNC_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_BEFORE_SYNC_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
@@ -108,14 +108,14 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_AFTER_SYNC_SLOW() macro
   local afterSyncSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_AFTER_SYNC_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_AFTER_SYNC_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro */"),
+      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=bogusLoc())),
       parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
