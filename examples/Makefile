@@ -13,7 +13,7 @@ all: ableC.jar examples
 
 ableC.jar: $(GRAMMAR_SOURCES)
 	touch artifact/Artifact.sv
-	silver -o $@ -I $(ABLEC_HOME)/ableC \
+	silver -o $@ $(SVFLAGS) -I $(ABLEC_HOME)/ableC \
 		     -I $(ABLEC_HOME)/extensions/ableC-cilk/grammars \
 		     artifact
 
