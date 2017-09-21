@@ -83,8 +83,7 @@ r::Stmt ::= e::MaybeExpr
             unaryExprOrTypeTraitExpr(
               sizeofOp(location=bogusLoc()),
               exprExpr(
-                unaryOpExpr(
-                  dereferenceOp(location=bogusLoc()),
+                dereferenceExpr(
                   declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
                   location=bogusLoc()
                 )
@@ -250,8 +249,7 @@ r::Stmt ::= me::MaybeExpr
             unaryExprOrTypeTraitExpr(
               sizeofOp(location=bogusLoc()),
               exprExpr(
-                unaryOpExpr(
-                  dereferenceOp(location=bogusLoc()),
+                dereferenceExpr(
                   declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
                   location=bogusLoc()
                 )

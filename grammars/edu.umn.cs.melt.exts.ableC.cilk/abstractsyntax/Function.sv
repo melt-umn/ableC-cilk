@@ -64,8 +64,8 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   local args :: Parameters =
     case mty of
-    | functionTypeExprWithArgs(_, args1, _) -> args1
-    | functionTypeExprWithoutArgs(_, _)     -> nilParameters()
+    | functionTypeExprWithArgs(_, args1, _, _) -> args1
+    | functionTypeExprWithoutArgs(_, _, _)     -> nilParameters()
     | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
     end;
 
@@ -129,7 +129,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
 
   local slowMty :: TypeModifierExpr =
-    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(fname), false);
+    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(fname), false, nilQualifier());
 
   -- TODO: do all of these need to be forward declared?
   local frameDecl :: Decl = txtDecl("struct _cilk_" ++ fname.name ++ "_frame;");
@@ -579,7 +579,7 @@ Decl ::= fname::Name body::Stmt
   local dcls :: Decls = nilDecl();
 
   local resultType :: TypeModifierExpr = baseTypeExpr();
-  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, importFunctionArgs, false);
+  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, importFunctionArgs, false, nilQualifier());
   local importFunctionArgs :: Parameters =
     foldParameterDecl([
       parameterDecl(
@@ -696,7 +696,7 @@ Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
   local resultType :: TypeModifierExpr = baseTypeExpr();
-  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, exportFunctionArgs, false);
+  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, exportFunctionArgs, false, nilQualifier());
   local exportFunctionArgs :: Parameters =
     consParameters(
       parameterDecl(
@@ -951,18 +951,10 @@ TypeModifierExpr ::= mty::TypeModifierExpr
 
   return
     case mty of
-    | functionTypeExprWithArgs(ret, args, variadic) ->
-        functionTypeExprWithArgs(
-          ret,
-          consParameters(wsParam, args),
-          variadic
-        )
-    | functionTypeExprWithoutArgs(ret, ids) ->
-        functionTypeExprWithArgs(
-          ret,
-          consParameters(wsParam, nilParameters()),
-          false
-        )
+    | functionTypeExprWithArgs(ret, args, variadic, q) ->
+        functionTypeExprWithArgs(ret, consParameters(wsParam, args), variadic, q)
+    | functionTypeExprWithoutArgs(ret, ids, q) ->
+        functionTypeExprWithArgs(ret, consParameters(wsParam, nilParameters()), false, q)
     | _ -> error("ToDo: fix this in Cilk ext.  Violating some rules about extensibility.")
     end;
 
@@ -1133,7 +1125,7 @@ Decl ::= newName::Name dcls::Decls body::Stmt
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
 
   local newParams :: TypeModifierExpr =
-    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(newName), false);
+    functionTypeExprWithArgs(baseTypeExpr(), mkSlowParams(newName), false, nilQualifier());
 
   return
     decls(foldDecl([
