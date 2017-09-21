@@ -22,6 +22,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::[SpecialSpecifier]
 
   bty.givenRefId = nothing();
 
+  mty.baseType = bty.typerep;
+  mty.typeModifiersIn = bty.typeModifiers;
+
   top.pp = ppConcat([
       terminate(space(), map((.pp), storage)),
       terminate( space(), specialSpecifiers.pps ),
@@ -198,6 +201,7 @@ global cilk_sync_locations_id::String = "cilk_sync_locations_id";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
+  top.pp = text("cilkMakeFrame()");
   local header :: StructItem =
     structItem(
       nilAttribute(),
@@ -360,6 +364,7 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
 abstract production makeArgsAndResultStruct
 top::Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
 {
+  top.pp = text("cilkMakeArgsAndResultStruct()");
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=bogusLoc());
   local resultField :: StructItem =
     structItem(
@@ -476,7 +481,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      txtStmt("/* TODO: restore only live variables */"),
+      exprStmt(comment("TODO: restore only live variables", location=bogusLoc())),
       foldStmt(map(restoreVariable, cilkFrameVars))
     ]);
 }
@@ -486,11 +491,33 @@ Stmt ::= cilkFrameVar::Pair<String String>
 {
   local n :: String = fst(cilkFrameVar);
   local scopeId :: String = snd(cilkFrameVar);
+  local scopeName :: Name = name("scope" ++ scopeId, location=bogusLoc());
+
   return
     -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
     if   n != "_cilk_ws" && n != "_cilk_frame"
-    then txtStmt(n ++ " = " ++ "_cilk_frame->scope" ++ scopeId ++ "." ++ n ++ ";")
-    else nullStmt();
+    then
+      -- n = _cilk_frame->scopeX.n;
+      exprStmt(
+        binaryOpExpr(
+          declRefExpr(name(n, location=bogusLoc()), location=bogusLoc()),
+          assignOp(eqOp(location=bogusLoc()), location=bogusLoc()),
+          memberExpr(
+            memberExpr(
+              declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+              true,
+              scopeName,
+              location=bogusLoc()
+            ),
+            false,
+            name(n, location=bogusLoc()),
+            location=bogusLoc()
+          ),
+          location=bogusLoc()
+        )
+      )
+    else
+      nullStmt();
 }
 
 function saveVariables
@@ -502,7 +529,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      txtStmt("/* TODO: save only live, dirty variables */"),
+      exprStmt(comment("TODO: save only live, dirty variables", location=bogusLoc())),
       foldStmt(map(saveVariable, cilkFrameVars))
     ]);
 }
@@ -512,11 +539,31 @@ Stmt ::= cilkFrameVar::Pair<String String>
 {
   local n :: String = fst(cilkFrameVar);
   local scopeId :: String = snd(cilkFrameVar);
+  local scopeName :: Name = name("scope" ++ scopeId, location=bogusLoc());
+
   return
     -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
     if   n != "_cilk_ws" && n != "_cilk_frame"
-    then txtStmt("_cilk_frame->scope" ++ scopeId ++ "." ++ n ++ " = "
-           ++ n ++ ";")
+    then
+      -- _cilk_frame->scopeX.n = n;
+      exprStmt(
+        binaryOpExpr(
+          memberExpr(
+            memberExpr(
+              declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+              true,
+              scopeName,
+              location=bogusLoc()
+            ),
+            false,
+            name(n, location=bogusLoc()),
+            location=bogusLoc()
+          ),
+          assignOp(eqOp(location=bogusLoc()), location=bogusLoc()),
+          declRefExpr(name(n, location=bogusLoc()), location=bogusLoc()),
+          location=bogusLoc()
+        )
+      )
     else nullStmt();
 }
 
@@ -924,6 +971,7 @@ TypeModifierExpr ::= mty::TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
+  top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
   top.globalDecls := [];
   top.defs := [];
   top.freeVariables = [];
@@ -981,7 +1029,7 @@ Stmt ::= newName::Name
   -- declare _cilk_frame and expand CILK2C_INIT_FRAME() macro
   local frameDecl :: Stmt =
     foldStmt([
-      txtStmt("/* declare _cilk_frame and expand CILK2C_INIT_FRAME() macro */"),
+      exprStmt(comment("declare _cilk_frame and expand CILK2C_INIT_FRAME() macro", location=bogusLoc())),
       declStmt(
         variableDecls(
           [],
@@ -1024,7 +1072,7 @@ Stmt ::= newName::Name
   -- expand CILK2C_START_THREAD_FAST() macro
   local startThreadFastCp :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_START_THREAD_FAST() macro */"),
+      exprStmt(comment("expand CILK2C_START_THREAD_FAST() macro", location=bogusLoc())),
       exprStmt(
         directCallExpr(
           name("Cilk_cilk2c_start_thread_fast_cp", location=bogusLoc()),
@@ -1127,6 +1175,8 @@ Parameters ::= newName::Name
 abstract production transformSlowClone
 top::Stmt ::= body::Stmt args::Parameters
 {
+  top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
+
   -- top.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   top.globalDecls := [];
@@ -1140,14 +1190,67 @@ top::Stmt ::= body::Stmt args::Parameters
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
     foldStmt([
-      txtStmt("/* expand CILK2C_START_THREAD_SLOW() macro */"),
-      txtStmt("Cilk_cilk2c_start_thread_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
-      txtStmt("Cilk_cilk2c_start_thread_slow(_cilk_ws, &(_cilk_frame->header));")
+      exprStmt(comment("expand CILK2C_START_THREAD_SLOW() macro", location=bogusLoc())),
+
+      -- Cilk_cilk2c_start_thread_slow_cp(_cilk_ws, &(_cilk_frame->header));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_start_thread_slow_cp", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      ),
+      -- Cilk_cilk2c_start_thread_slow(_cilk_ws, &(_cilk_frame->header));
+      exprStmt(
+        directCallExpr(
+          name("Cilk_cilk2c_start_thread_slow", location=bogusLoc()),
+          foldExpr([
+            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            mkAddressOf(
+              memberExpr(
+                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                true,
+                name("header", location=bogusLoc()),
+                location=bogusLoc()
+              ),
+              bogusLoc()
+            )
+          ]),
+          location=bogusLoc()
+        )
+      )
     ]);
 
+  -- switch (_cilk_frame->header.entry) { ... }
+  -- TODO: don't use txtStmt
   local switchHeaderEntry :: Stmt =
     txtStmt("switch (_cilk_frame->header.entry) {"
     ++ makeSwitchHeaderCases(length(top.syncLocations)) ++ "}");
+--    switchStmt(
+--      memberExpr(
+--        memberExpr(
+--          declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+--          true,
+--          name("header", location=bogusLoc()),
+--          location=bogusLoc()
+--        ),
+--        false,
+--        name("entry", location=bogusLoc()),
+--        location=bogusLoc()
+--      ),
+--      makeSwitchHeaderCases(length(top.syncLocations))
+--    );
 
   forwards to
     foldStmt([
@@ -1166,6 +1269,21 @@ top::Stmt ::= body::Stmt args::Parameters
   } ;
 }
 
+--function makeSwitchHeaderCases
+--Stmt ::= syncCount::Integer
+--{
+--  return
+--    if   syncCount < 1
+--    then nullStmt()
+--    else
+--      seqStmt(
+--        caseLabelStmt(
+--            mkIntConst(syncCount, bogusLoc()),
+--            gotoStmt(name("_cilk_sync" ++ toString(syncCount), location=bogusLoc()))
+--        ),
+--        makeSwitchHeaderCases(syncCount - 1)
+--      );
+--}
 function makeSwitchHeaderCases
 String ::= syncCount::Integer
 {
@@ -1175,6 +1293,7 @@ String ::= syncCount::Integer
     else "case " ++ toString(syncCount) ++ ": goto _cilk_sync" ++
       toString(syncCount) ++ "; " ++ makeSwitchHeaderCases(syncCount - 1);
 }
+
 
 {- based on cilkc2c/transform.c:MakeLinkage() -}
 function makeLinkage
