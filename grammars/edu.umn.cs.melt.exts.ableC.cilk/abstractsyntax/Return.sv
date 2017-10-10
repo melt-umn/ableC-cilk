@@ -45,54 +45,54 @@ r::Stmt ::= e::MaybeExpr
   -- expand CILK2C_START_THREAD_FAST() macro
   local beforeReturnFast :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_RETURN_FAST() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_BEFORE_RETURN_FAST() macro", location=builtinLoc(MODULE_NAME))),
       -- Cilk_cilk2c_before_return_fast_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_before_return_fast_cp", location=bogusLoc()),
+          name("Cilk_cilk2c_before_return_fast_cp", location=builtinLoc(MODULE_NAME)),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
                 true,
-                name("header", location=bogusLoc()),
-                location=bogusLoc()
+                name("header", location=builtinLoc(MODULE_NAME)),
+                location=builtinLoc(MODULE_NAME)
               ),
-              bogusLoc()
+              builtinLoc(MODULE_NAME)
             )
           ]),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
       ),
       -- Cilk_cilk2c_before_return_fast(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_before_return_fast", location=bogusLoc()),
+          name("Cilk_cilk2c_before_return_fast", location=builtinLoc(MODULE_NAME)),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
                 true,
-                name("header", location=bogusLoc()),
-                location=bogusLoc()
+                name("header", location=builtinLoc(MODULE_NAME)),
+                location=builtinLoc(MODULE_NAME)
               ),
-              bogusLoc()
+              builtinLoc(MODULE_NAME)
             ),
             unaryExprOrTypeTraitExpr(
-              sizeofOp(location=bogusLoc()),
+              sizeofOp(location=builtinLoc(MODULE_NAME)),
               exprExpr(
                 unaryOpExpr(
-                  dereferenceOp(location=bogusLoc()),
-                  declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
-                  location=bogusLoc()
+                  dereferenceOp(location=builtinLoc(MODULE_NAME)),
+                  declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+                  location=builtinLoc(MODULE_NAME)
                 )
               ),
-              location=bogusLoc()
+              location=builtinLoc(MODULE_NAME)
             )
           ]),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
       )
     ]);
@@ -113,7 +113,7 @@ r::Stmt ::= e::MaybeExpr
               beforeReturnFast,
               returnStmt(
                 justExpr(
-                  declRefExpr(name("_cilk_tmp", location=bogusLoc()), location=bogusLoc())
+                  declRefExpr(name("_cilk_tmp", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))
                 )
               )
             ]
@@ -145,7 +145,7 @@ r::Stmt ::= me::MaybeExpr
 
   -- TODO: handle return void
   local tmpNameStr :: String = "__tmp" ++ toString(genInt());
-  local tmpName :: Name = name(tmpNameStr, location=bogusLoc());
+  local tmpName :: Name = name(tmpNameStr, location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls([], nilAttribute(),
@@ -165,40 +165,40 @@ r::Stmt ::= me::MaybeExpr
   local setResult :: Stmt =
     exprStmt(
       directCallExpr(
-        name("Cilk_set_result", location=bogusLoc()),
+        name("Cilk_set_result", location=builtinLoc(MODULE_NAME)),
         foldExpr([
-          declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
-          mkAddressOf(declRefExpr(tmpName, location=bogusLoc()), bogusLoc()),
+          declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+          mkAddressOf(declRefExpr(tmpName, location=builtinLoc(MODULE_NAME)), builtinLoc(MODULE_NAME)),
           unaryExprOrTypeTraitExpr(
-            sizeofOp(location=bogusLoc()),
-            exprExpr(declRefExpr(tmpName, location=bogusLoc())),
-            location=bogusLoc()
+            sizeofOp(location=builtinLoc(MODULE_NAME)),
+            exprExpr(declRefExpr(tmpName, location=builtinLoc(MODULE_NAME))),
+            location=builtinLoc(MODULE_NAME)
           )
         ]),
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       )
     );
 
   local setNoResult :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_SET_NORESULT", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_SET_NORESULT", location=builtinLoc(MODULE_NAME))),
       -- Cilk_set_result(_cilk_ws, (void *)0, 0);
       exprStmt(
         directCallExpr(
-          name("Cilk_set_result", location=bogusLoc()),
+          name("Cilk_set_result", location=builtinLoc(MODULE_NAME)),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             explicitCastExpr(
               typeName(
                 directTypeExpr(builtinType(nilQualifier(), voidType())),
                 pointerTypeExpr(nilQualifier(), baseTypeExpr())
               ),
-              mkIntConst(0, bogusLoc()),
-              location=bogusLoc()
+              mkIntConst(0, builtinLoc(MODULE_NAME)),
+              location=builtinLoc(MODULE_NAME)
             ),
-            mkIntConst(0, bogusLoc())
+            mkIntConst(0, builtinLoc(MODULE_NAME))
           ]),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
       )
     ]);
@@ -212,54 +212,54 @@ r::Stmt ::= me::MaybeExpr
   -- expand CILK2C_BEFORE_RETURN_SLOW() macro
   local beforeSlowReturn :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_RETURN_SLOW macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_BEFORE_RETURN_SLOW macro", location=builtinLoc(MODULE_NAME))),
       -- Cilk_cilk2c_before_return_slow_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_before_return_slow_cp", location=bogusLoc()),
+          name("Cilk_cilk2c_before_return_slow_cp", location=builtinLoc(MODULE_NAME)),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
                 true,
-                name("header", location=bogusLoc()),
-                location=bogusLoc()
+                name("header", location=builtinLoc(MODULE_NAME)),
+                location=builtinLoc(MODULE_NAME)
               ),
-              bogusLoc()
+              builtinLoc(MODULE_NAME)
             )
           ]),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
       ),
       -- Cilk_cilk2c_before_return_slow(_cilk_ws, &(_cilk_frame->header), sizeof(*_cilk_frame));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_before_return_slow", location=bogusLoc()),
+          name("Cilk_cilk2c_before_return_slow", location=builtinLoc(MODULE_NAME)),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
                 true,
-                name("header", location=bogusLoc()),
-                location=bogusLoc()
+                name("header", location=builtinLoc(MODULE_NAME)),
+                location=builtinLoc(MODULE_NAME)
               ),
-              bogusLoc()
+              builtinLoc(MODULE_NAME)
             ),
             unaryExprOrTypeTraitExpr(
-              sizeofOp(location=bogusLoc()),
+              sizeofOp(location=builtinLoc(MODULE_NAME)),
               exprExpr(
                 unaryOpExpr(
-                  dereferenceOp(location=bogusLoc()),
-                  declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
-                  location=bogusLoc()
+                  dereferenceOp(location=builtinLoc(MODULE_NAME)),
+                  declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+                  location=builtinLoc(MODULE_NAME)
                 )
               ),
-              location=bogusLoc()
+              location=builtinLoc(MODULE_NAME)
             )
           ]),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
       )
     ]);
