@@ -12,12 +12,6 @@ top::Expr ::= e::Expr
   top.cilkFrameDeclsScopes = e.cilkFrameDeclsScopes;
 }
 
-aspect production qualifiedUnaryOpExpr
-top::Expr ::= op::UnaryOp   e::Expr  collectedTypeQualifiers::Qualifiers
-{
-  top.cilkFrameDeclsScopes = e.cilkFrameDeclsScopes;
-}
-
 aspect production arraySubscriptExpr
 top::Expr ::= lhs::Expr  rhs::Expr
 {
@@ -35,12 +29,6 @@ aspect production memberExpr
 top::Expr ::= lhs::Expr  deref::Boolean  rhs::Name
 {
   top.cilkFrameDeclsScopes = lhs.cilkFrameDeclsScopes;
-}
-
-aspect production qualifiedBinaryOpExpr
-top::Expr ::= lhs::Expr  op::BinOp  rhs::Expr  collectedTypeQualifiers::Qualifiers
-{
-  top.cilkFrameDeclsScopes = lhs.cilkFrameDeclsScopes ++ rhs.cilkFrameDeclsScopes;
 }
 
 aspect production conditionalExpr

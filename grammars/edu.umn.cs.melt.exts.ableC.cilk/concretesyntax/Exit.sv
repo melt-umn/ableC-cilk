@@ -1,15 +1,14 @@
-grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:exitStmt;
+grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax;
 
 -- Import host language components
-imports edu:umn:cs:melt:ableC:concretesyntax;
-imports edu:umn:cs:melt:ableC:abstractsyntax as abs;
-imports edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
+import edu:umn:cs:melt:ableC:concretesyntax;
+import edu:umn:cs:melt:ableC:abstractsyntax:host as abs;
+import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 
 
 -- Some library utilities and the Cilk abstract syntax
-imports silver:langutil;
-imports edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
-
+import silver:langutil;
+import edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
 marking terminal CilkExit_t 'cilk_exit' lexer classes {Ckeyword};
 

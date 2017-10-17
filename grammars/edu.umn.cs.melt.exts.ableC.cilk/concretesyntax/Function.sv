@@ -1,16 +1,14 @@
-grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:functionDef;
+grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax;
 
 -- Import host language components
-imports edu:umn:cs:melt:ableC:concretesyntax;
-imports edu:umn:cs:melt:ableC:concretesyntax:lexerHack as lh;
-imports edu:umn:cs:melt:ableC:abstractsyntax as abs;
-imports edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
+import edu:umn:cs:melt:ableC:concretesyntax;
+import edu:umn:cs:melt:ableC:concretesyntax:lexerHack as lh;
+import edu:umn:cs:melt:ableC:abstractsyntax:host as abs;
+import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 
 -- Some library utilities and the Cilk abstract syntax
-imports silver:langutil;
-imports edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
-
-exports edu:umn:cs:melt:exts:ableC:cilk:concretesyntax:cilkKeyword;
+import silver:langutil;
+import edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
 concrete production cilk_func_c
 top::Declaration_c ::= 'cilk' f::CilkFunctionDefinition_c
@@ -35,9 +33,12 @@ concrete productions top::CilkFunctionDefinition_c
     local bt :: abs:BaseTypeExpr =
       abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
+    local specialSpecifiers :: abs:SpecialSpecifiers =
+      foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
+
     top.ast =
       cilkFunctionProto(
-        ds.storageClass, ds.specialSpecifiers, bt, d.ast,
+        ds.storageClass, specialSpecifiers, bt, d.ast,
         d.declaredIdent, ds.attributes
       );
   }
@@ -52,8 +53,11 @@ concrete productions top::CilkInitialFunctionDefinition_c
       local bt :: abs:BaseTypeExpr =
         abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
+      local specialSpecifiers :: abs:SpecialSpecifiers =
+        foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
+
       top.ast =
-        cilkFunctionDecl(ds.storageClass, ds.specialSpecifiers, bt, d.ast, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, d.ast, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Function are annoying because we have to open a scope, then add the
@@ -67,7 +71,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         abs:figureOutTypeFromSpecifiers(d.location, abs:nilQualifier(), [], [], []);
 
       top.ast =
-        cilkFunctionDecl([], [], bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility

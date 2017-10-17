@@ -22,7 +22,7 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
-      declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
       args
     );
 
@@ -35,8 +35,8 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   local callF :: Expr =
     case f of
-    | declRefExpr(id) -> directCallExpr(id, newArgs, location=bogusLoc())
-    | _               -> callExpr(f, newArgs, location=bogusLoc())
+    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtinLoc(MODULE_NAME))
+    | _               -> callExpr(f, newArgs, location=builtinLoc(MODULE_NAME))
     end;
 
   s.errors := case fast,slow of
@@ -80,9 +80,9 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
   local assignExpr :: Expr =
     binaryOpExpr(
       l,
-      assignOp(op, location=bogusLoc()),
+      assignOp(op, location=builtinLoc(MODULE_NAME)),
       callF,
-      location=bogusLoc()
+      location=builtinLoc(MODULE_NAME)
     );
 
   forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l), l.location);
@@ -108,14 +108,14 @@ s::Stmt ::= f::Expr args::Exprs
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
-      declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc()),
+      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
       args
     );
 
   local callF :: Expr =
     case f of
-    | declRefExpr(id) -> directCallExpr(id, newArgs, location=bogusLoc())
-    | _               -> callExpr(f, newArgs, location=bogusLoc())
+    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtinLoc(MODULE_NAME))
+    | _               -> callExpr(f, newArgs, location=builtinLoc(MODULE_NAME))
     end;
 
   local syncCount :: Integer = lookupSyncCount(f.location, s.env);
@@ -147,11 +147,11 @@ s::Stmt ::= f::Expr args::Exprs
          cons(
            init(objectInitializer(
              foldInit([
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc())))
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
              ])
            )),
            s.cilkLinksInh
@@ -180,19 +180,19 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -228,9 +228,9 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
              foldInit([
                init(exprInitializer(sizeofL)),
                init(exprInitializer(frameOffset)),
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc()))),
-               init(exprInitializer(mkIntConst(0, bogusLoc())))
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
              ])
            )),
            s.cilkLinksInh
@@ -238,9 +238,9 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 
   local sizeofL :: Expr =
     unaryExprOrTypeTraitExpr(
-      sizeofOp(location=bogusLoc()),
+      sizeofOp(location=builtinLoc(MODULE_NAME)),
       typeNameExpr(typeName(directTypeExpr(l.typerep), baseTypeExpr())),
-      location=bogusLoc()
+      location=builtinLoc(MODULE_NAME)
     );
 
   -- FIXME: l should be an id, not an Expr
@@ -252,8 +252,8 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
 
   -- TODO: check that lookupScopeId does not return Nil
   local lScopeId :: String = head(lookupScopeId(lName.name, s.env));
-  local scopeName :: Name = name("scope" ++ lScopeId, location=bogusLoc());
-  local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=bogusLoc());
+  local scopeName :: Name = name("scope" ++ lScopeId, location=builtinLoc(MODULE_NAME));
+  local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtinLoc(MODULE_NAME));
 
   local saveL :: Stmt =
     if   lIsGlobal
@@ -273,7 +273,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
   local frameOffset :: Expr =
     explicitCastExpr(
       typeName(
-        typedefTypeExpr(nilQualifier(), name("size_t", location=bogusLoc())),
+        typedefTypeExpr(nilQualifier(), name("size_t", location=builtinLoc(MODULE_NAME))),
         baseTypeExpr()
       ),
       binaryOpExpr(
@@ -290,22 +290,22 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
                     tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
                     pointerTypeExpr(nilQualifier(), baseTypeExpr())
                   ),
-                  mkIntConst(0, bogusLoc()),
-                  location=bogusLoc()
+                  mkIntConst(0, builtinLoc(MODULE_NAME)),
+                  location=builtinLoc(MODULE_NAME)
                 ),
                 true,
                 scopeName,
-                location=bogusLoc()
+                location=builtinLoc(MODULE_NAME)
               ),
               false,
               lName,
-              location=bogusLoc()
+              location=builtinLoc(MODULE_NAME)
             ),
-            bogusLoc()
+            builtinLoc(MODULE_NAME)
           ),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         ),
-        numOp(subOp(location=bogusLoc()), location=bogusLoc()),
+        numOp(subOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
         explicitCastExpr(
           typeName(
             builtinTypeExpr(nilQualifier(), signedType(charType())),
@@ -316,23 +316,23 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
               tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
               pointerTypeExpr(nilQualifier(), baseTypeExpr())
             ),
-            mkIntConst(0, bogusLoc()),
-            location=bogusLoc()
+            mkIntConst(0, builtinLoc(MODULE_NAME)),
+            location=builtinLoc(MODULE_NAME)
           ),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         ),
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       ),
-      location=bogusLoc()
+      location=builtinLoc(MODULE_NAME)
     );
 
   -- l = callF();
   local assignExpr :: Expr =
     binaryOpExpr(
       l,
-      assignOp(op, location=bogusLoc()),
+      assignOp(op, location=builtinLoc(MODULE_NAME)),
       callF,
-      location=bogusLoc()
+      location=builtinLoc(MODULE_NAME)
     );
 
   forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL, l.location);
@@ -352,30 +352,30 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
-      mkIntConst(0, bogusLoc()),
+      mkIntConst(0, builtinLoc(MODULE_NAME)),
       foldStmt([
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;"),
           -- TODO: replace txtStmt with labelStmt
---        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=bogusLoc()), nullStmt()),
+--        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)), nullStmt()),
         restoreVariables(s.env)
       ])
     );
@@ -383,7 +383,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -443,7 +443,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   l.env = top.env;
   l.returnType = top.returnType;
 
-  local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=bogusLoc());
+  local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls([], nilAttribute(),
@@ -471,14 +471,14 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | nothingExpr() -> nullStmt()
     end;
 
-  local ws :: Expr = declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc());
+  local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME));
 
   local xPopFrameResult :: Stmt =
     ifStmtNoElse(
       directCallExpr(
-        name("Cilk_cilk2c_pop_check", location=bogusLoc()),
+        name("Cilk_cilk2c_pop_check", location=builtinLoc(MODULE_NAME)),
         foldExpr([ws]),
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       ),
       foldStmt([
         mAssignTmp,
@@ -486,32 +486,32 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
       ])
     );
 
-  local tmp :: Expr = declRefExpr(tmpName, location=bogusLoc());
+  local tmp :: Expr = declRefExpr(tmpName, location=builtinLoc(MODULE_NAME));
   local assignTmp :: Stmt =
     exprStmt(
       binaryOpExpr(
         tmp,
-        assignOp(eqOp(location=bogusLoc()), location=bogusLoc()),
+        assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
         l,
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       )
     );
 
   local tmpAddr :: Expr =
     case ml of
-    | justExpr(_)   -> mkAddressOf(tmp, bogusLoc())
-    | nothingExpr() -> mkIntConst(0, bogusLoc())
+    | justExpr(_)   -> mkAddressOf(tmp, builtinLoc(MODULE_NAME))
+    | nothingExpr() -> mkIntConst(0, builtinLoc(MODULE_NAME))
     end;
 
   local sizeofTmp :: Expr =
     case ml of
     | justExpr(_) ->
         unaryExprOrTypeTraitExpr(
-          sizeofOp(location=bogusLoc()),
+          sizeofOp(location=builtinLoc(MODULE_NAME)),
           exprExpr(tmp),
-          location=bogusLoc()
+          location=builtinLoc(MODULE_NAME)
         )
-    | nothingExpr() -> mkIntConst(0, bogusLoc())
+    | nothingExpr() -> mkIntConst(0, builtinLoc(MODULE_NAME))
     end;
 
   -- TODO: correct XPOP_FRAME_RESULT return
@@ -531,13 +531,13 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local ifExceptionHandler :: Stmt =
     ifStmtNoElse(
       directCallExpr(
-        name("Cilk_exception_handler", location=bogusLoc()),
+        name("Cilk_exception_handler", location=builtinLoc(MODULE_NAME)),
         foldExpr([
           ws,
           tmpAddr,
           sizeofTmp
         ]),
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       ),
       foldStmt([
         parseStmt("Cilk_cilk2c_pop(_cilk_ws);"),
@@ -547,8 +547,8 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 
   local expandComment :: Stmt =
     case ml of
-    | justExpr(_)   -> exprStmt(comment("expand CILK2C_XPOP_FRAME_RESULT() macro", location=bogusLoc()))
-    | nothingExpr() -> exprStmt(comment("expand CILK2C_XPOP_FRAME_NORESULT() macro", location=bogusLoc()))
+    | justExpr(_)   -> exprStmt(comment("expand CILK2C_XPOP_FRAME_RESULT() macro", location=builtinLoc(MODULE_NAME)))
+    | nothingExpr() -> exprStmt(comment("expand CILK2C_XPOP_FRAME_NORESULT() macro", location=builtinLoc(MODULE_NAME)))
     end;
 
   forwards to
@@ -572,18 +572,18 @@ Stmt ::= syncCount::Integer
         memberExpr(
           -- cilk_frame->header
           memberExpr(
-            declRefExpr(name("_cilk_frame", location=bogusLoc()), location=bogusLoc()),
+            declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
             true,
-            name("header", location=bogusLoc()),
-            location=bogusLoc()
+            name("header", location=builtinLoc(MODULE_NAME)),
+            location=builtinLoc(MODULE_NAME)
           ),
           false,
-          name("entry", location=bogusLoc()),
-          location=bogusLoc()
+          name("entry", location=builtinLoc(MODULE_NAME)),
+          location=builtinLoc(MODULE_NAME)
         ),
-        assignOp(eqOp(location=bogusLoc()), location=bogusLoc()),
-        mkIntConst(syncCount, bogusLoc()),
-        location=bogusLoc()
+        assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+        mkIntConst(syncCount, builtinLoc(MODULE_NAME)),
+        location=builtinLoc(MODULE_NAME)
       )
     );
 }

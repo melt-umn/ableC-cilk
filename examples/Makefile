@@ -18,7 +18,7 @@ ableC.jar: $(GRAMMAR_SOURCES)
 		     artifact
 
 fib.c:	fib.xc ableC.jar
-	java -jar ableC.jar fib.xc -I/usr/local/include/cilk -I../include
+	java -Xss6M -jar ableC.jar fib.xc -I/usr/local/include/cilk -I../include
 
 fib.out:	fib.c
 	gcc -xc -I/usr/local/include/cilk -I../include -D__REENTRANT -O2 \

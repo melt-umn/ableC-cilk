@@ -46,7 +46,7 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_AT_SYNC_FAST() macro
   forwards to
     foldStmt([
-      exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
@@ -66,11 +66,11 @@ s::Stmt ::= loc::Location
      cons(
        init(objectInitializer(
          foldInit([
-           init(exprInitializer(mkIntConst(0, bogusLoc()))),
-           init(exprInitializer(mkIntConst(0, bogusLoc()))),
-           init(exprInitializer(mkIntConst(0, bogusLoc()))),
-           init(exprInitializer(mkIntConst(0, bogusLoc()))),
-           init(exprInitializer(mkIntConst(0, bogusLoc())))
+           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
          ])
        )),
        s.cilkLinksInh
@@ -79,7 +79,7 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_BEFORE_SYNC_SLOW() macro
   local beforeSyncSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_SYNC_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_BEFORE_SYNC_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
@@ -90,17 +90,17 @@ s::Stmt ::= loc::Location
     ifStmtNoElse(
       -- expand CILK2C_SYNC macro to Cilk_sync(_cilk_ws)
       directCallExpr(
-        name("Cilk_sync", location=bogusLoc()),
+        name("Cilk_sync", location=builtinLoc(MODULE_NAME)),
         foldExpr([
-          declRefExpr(name("_cilk_ws", location=bogusLoc()), location=bogusLoc())
+          declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))
         ]),
-        location=bogusLoc()
+        location=builtinLoc(MODULE_NAME)
       ),
       foldStmt([
         parseStmt("return;"),
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;")
         -- TODO: replace txtStmt with labelStmt
---        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=bogusLoc()), nullStmt()),
+--        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)), nullStmt()),
 --        restoreVariables(s.env)
       ])
     );
@@ -108,14 +108,14 @@ s::Stmt ::= loc::Location
   -- expand CILK2C_AFTER_SYNC_SLOW() macro
   local afterSyncSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AFTER_SYNC_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AFTER_SYNC_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
     ]);
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=bogusLoc())),
+      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
       parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
     ]);
