@@ -502,9 +502,8 @@ Stmt ::= cilkFrameVar::Pair<String String>
     then
       -- n = _cilk_frame->scopeX.n;
       exprStmt(
-        binaryOpExpr(
+        eqExpr(
           declRefExpr(name(n, location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-          assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
           memberExpr(
             memberExpr(
               declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
@@ -550,7 +549,7 @@ Stmt ::= cilkFrameVar::Pair<String String>
     then
       -- _cilk_frame->scopeX.n = n;
       exprStmt(
-        binaryOpExpr(
+        eqExpr(
           memberExpr(
             memberExpr(
               declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
@@ -562,7 +561,6 @@ Stmt ::= cilkFrameVar::Pair<String String>
             name(n, location=builtinLoc(MODULE_NAME)),
             location=builtinLoc(MODULE_NAME)
           ),
-          assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
           declRefExpr(name(n, location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
           location=builtinLoc(MODULE_NAME)
         )
@@ -666,13 +664,7 @@ Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
       fastCloneArgs,
       location=builtinLoc(MODULE_NAME)
     );
-  local assignResult :: Expr =
-    binaryOpExpr(
-      procResult,
-      assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-      callFastClone,
-      location=builtinLoc(MODULE_NAME)
-    );
+  local assignResult :: Expr = eqExpr(procResult, callFastClone, location=builtinLoc(MODULE_NAME));
 
   -- don't assign result if return void
   local mAssignResult :: Expr =
@@ -889,12 +881,11 @@ Stmt ::= arg::ParameterDecl procArgsName::Name
   -- example: _cilk_procargs->x = x;
   return
     exprStmt(
-      binaryOpExpr(
+      eqExpr(
         memberExpr(
           declRefExpr(procArgsName, location=builtinLoc(MODULE_NAME)),
           true, n, location=builtinLoc(MODULE_NAME)
         ),
-        assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
         declRefExpr(n, location=builtinLoc(MODULE_NAME)),
         location=builtinLoc(MODULE_NAME)
       )

@@ -4,10 +4,10 @@ import edu:umn:cs:melt:ableC:abstractsyntax:construction:parsing;
 import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 
 abstract production cilkSpawnStmt
-s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
+s::Stmt ::= l::Expr f::Expr args::Exprs
 {
   propagate substituted;
-  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(),
+  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   -- s.env depends on these, if not set then compiler will crash while looping
@@ -48,8 +48,8 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 
   local spawnStmt :: Stmt =
     case fast,slow of
-    | true,false  -> cilk_fastCloneSpawnWithEqOp(l, op, callF)
-    | false,true  -> cilk_slowCloneSpawnWithEqOp(l, op, callF)
+    | true,false  -> cilk_fastCloneSpawnWithEqOp(l, callF)
+    | false,true  -> cilk_slowCloneSpawnWithEqOp(l, callF)
     | true,true   -> error ("We think we're in both a fast and a slow clone!1")
     | false,false -> error ("We don't think we're in a fast or slow clone!2")
     end;
@@ -72,18 +72,13 @@ s::Stmt ::= l::Expr op::AssignOp f::Expr args::Exprs
 }
 
 abstract production cilk_fastCloneSpawnWithEqOp
-s::Stmt ::= l::Expr op::AssignOp callF::Expr
+s::Stmt ::= l::Expr callF::Expr
 {
   --s.errors := [] ; -- TODO .... l.type   ++ f.erros ++ args.errors ;
 
   -- l = callF();
-  local assignExpr :: Expr =
-    binaryOpExpr(
-      l,
-      assignOp(op, location=builtinLoc(MODULE_NAME)),
-      callF,
-      location=builtinLoc(MODULE_NAME)
-    );
+  -- TODO: handle assignOps other than eq
+  local assignExpr :: Expr = eqExpr(l, callF, location=builtinLoc(MODULE_NAME));
 
   forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l), l.location);
 }
@@ -208,10 +203,10 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 }
 
 abstract production cilk_slowCloneSpawnWithEqOp
-s::Stmt ::= l::Expr op::AssignOp callF::Expr
+s::Stmt ::= l::Expr callF::Expr
 {
   propagate substituted;
-  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), op.pp, space(), callF.pp]);
+  s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
 
   local lIsGlobal :: Boolean =
     !containsBy(
@@ -259,7 +254,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     if   lIsGlobal
     then nullStmt()
     else
-      subStmt(
+      substStmt(
         [nameSubstitution("_scopeName_", scopeName),
          nameSubstitution("_lName_", lName)],
         parseStmt("_cilk_frame->_scopeName_._lName_ = _lName_;")
@@ -276,7 +271,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
         typedefTypeExpr(nilQualifier(), name("size_t", location=builtinLoc(MODULE_NAME))),
         baseTypeExpr()
       ),
-      binaryOpExpr(
+      subExpr(
         explicitCastExpr(
           typeName(
             builtinTypeExpr(nilQualifier(), signedType(charType())),
@@ -305,7 +300,6 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
           ),
           location=builtinLoc(MODULE_NAME)
         ),
-        numOp(subOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
         explicitCastExpr(
           typeName(
             builtinTypeExpr(nilQualifier(), signedType(charType())),
@@ -327,13 +321,7 @@ s::Stmt ::= l::Expr op::AssignOp callF::Expr
     );
 
   -- l = callF();
-  local assignExpr :: Expr =
-    binaryOpExpr(
-      l,
-      assignOp(op, location=builtinLoc(MODULE_NAME)),
-      callF,
-      location=builtinLoc(MODULE_NAME)
-    );
+  local assignExpr :: Expr = eqExpr(l, callF, location=builtinLoc(MODULE_NAME));
 
   forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL, l.location);
 }
@@ -487,15 +475,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     );
 
   local tmp :: Expr = declRefExpr(tmpName, location=builtinLoc(MODULE_NAME));
-  local assignTmp :: Stmt =
-    exprStmt(
-      binaryOpExpr(
-        tmp,
-        assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-        l,
-        location=builtinLoc(MODULE_NAME)
-      )
-    );
+  local assignTmp :: Stmt = exprStmt(eqExpr( tmp, l, location=builtinLoc(MODULE_NAME)));
 
   local tmpAddr :: Expr =
     case ml of
@@ -567,7 +547,7 @@ Stmt ::= syncCount::Integer
 {
   return
     exprStmt(
-      binaryOpExpr(
+      eqExpr(
         -- cilk_frame->header.entry
         memberExpr(
           -- cilk_frame->header
@@ -581,7 +561,6 @@ Stmt ::= syncCount::Integer
           name("entry", location=builtinLoc(MODULE_NAME)),
           location=builtinLoc(MODULE_NAME)
         ),
-        assignOp(eqOp(location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
         mkIntConst(syncCount, builtinLoc(MODULE_NAME)),
         location=builtinLoc(MODULE_NAME)
       )

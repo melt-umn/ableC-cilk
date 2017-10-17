@@ -71,7 +71,8 @@ node {
                doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
                extensions: [
                  [ $class: 'RelativeTargetDirectory',
-                   relativeTargetDir: "extensions/${extension_name}"]
+                   relativeTargetDir: "extensions/${extension_name}"],
+                 [ $class: 'CleanCheckout']
                  ],
                submoduleCfg: scm.submoduleCfg,
                userRemoteConfigs: scm.userRemoteConfigs
@@ -83,7 +84,8 @@ node {
                  doGenerateSubmoduleConfigurations: false,
                  extensions: [
                    [ $class: 'RelativeTargetDirectory',
-                     relativeTargetDir: 'ableC']
+                     relativeTargetDir: 'ableC'],
+                   [ $class: 'CleanCheckout']
                  ],
                  submoduleCfg: [],
                  userRemoteConfigs: [
