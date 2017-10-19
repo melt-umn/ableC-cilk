@@ -361,8 +361,11 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
     ifStmtNoElse(
       mkIntConst(0, builtinLoc(MODULE_NAME)),
       foldStmt([
+        -- TODO: in the long term, txtStmt should be replaced with labelStmt,
+        --       but there are issues with functiondefs being overridden in
+        --       cilkSpawnStmt, see ableC Issue #77 for more info
+        --       https://github.com/melt-umn/ableC/issues/77
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;"),
-          -- TODO: replace txtStmt with labelStmt
 --        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)), nullStmt()),
         restoreVariables(s.env)
       ])
