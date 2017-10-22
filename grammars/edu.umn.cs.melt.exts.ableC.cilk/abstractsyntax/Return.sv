@@ -80,8 +80,7 @@ r::Stmt ::= e::MaybeExpr
               ),
               builtinLoc(MODULE_NAME)
             ),
-            unaryExprOrTypeTraitExpr(
-              sizeofOp(location=builtinLoc(MODULE_NAME)),
+            sizeofExpr(
               exprExpr(
                 dereferenceExpr(
                   declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
@@ -168,8 +167,7 @@ r::Stmt ::= me::MaybeExpr
         foldExpr([
           declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
           mkAddressOf(declRefExpr(tmpName, location=builtinLoc(MODULE_NAME)), builtinLoc(MODULE_NAME)),
-          unaryExprOrTypeTraitExpr(
-            sizeofOp(location=builtinLoc(MODULE_NAME)),
+          sizeofExpr(
             exprExpr(declRefExpr(tmpName, location=builtinLoc(MODULE_NAME))),
             location=builtinLoc(MODULE_NAME)
           )
@@ -246,8 +244,7 @@ r::Stmt ::= me::MaybeExpr
               ),
               builtinLoc(MODULE_NAME)
             ),
-            unaryExprOrTypeTraitExpr(
-              sizeofOp(location=builtinLoc(MODULE_NAME)),
+            sizeofExpr(
               exprExpr(
                 dereferenceExpr(
                   declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),

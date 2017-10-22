@@ -744,8 +744,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
     );
 
   local sizeofArgs :: Expr =
-    unaryExprOrTypeTraitExpr(
-      sizeofOp(location=builtinLoc(MODULE_NAME)),
+    sizeofExpr(
       typeNameExpr(typeName(procArgsStruct, baseTypeExpr())),
       location=builtinLoc(MODULE_NAME)
     );
@@ -814,8 +813,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
     if   returnsVoid
     then mkIntConst(0, builtinLoc(MODULE_NAME))
     else
-      unaryExprOrTypeTraitExpr(
-        sizeofOp(location=builtinLoc(MODULE_NAME)),
+      sizeofExpr(
         typeNameExpr(typeName(resultType, baseTypeExpr())),
         location=builtinLoc(MODULE_NAME)
       );
@@ -1039,8 +1037,7 @@ Stmt ::= newName::Name
         name("Cilk_cilk2c_init_frame", location=builtinLoc(MODULE_NAME)),
         foldExpr([
           ws,
-          unaryExprOrTypeTraitExpr(
-            sizeofOp(location=builtinLoc(MODULE_NAME)),
+          sizeofExpr(
             typeNameExpr(
               typeName(
                 tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
@@ -1289,16 +1286,14 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
     if   returnsVoid
     then mkIntConst(0, builtinLoc(MODULE_NAME))
     else
-      unaryExprOrTypeTraitExpr(
-        sizeofOp(location=builtinLoc(MODULE_NAME)),
+      sizeofExpr(
         typeNameExpr(typeName(bty, baseTypeExpr())),
         location=builtinLoc(MODULE_NAME)
       );
 
   local frameStructName :: Name = name("_cilk_" ++ fname.name ++ "_frame", location=builtinLoc(MODULE_NAME));
   local sizeofFrame :: Expr =
-    unaryExprOrTypeTraitExpr(
-      sizeofOp(location=builtinLoc(MODULE_NAME)),
+    sizeofExpr(
       typeNameExpr(
         typeName(
           tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
