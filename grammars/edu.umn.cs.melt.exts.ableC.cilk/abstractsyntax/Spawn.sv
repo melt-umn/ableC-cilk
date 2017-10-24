@@ -232,8 +232,7 @@ s::Stmt ::= l::Expr callF::Expr
          );
 
   local sizeofL :: Expr =
-    unaryExprOrTypeTraitExpr(
-      sizeofOp(location=builtinLoc(MODULE_NAME)),
+    sizeofExpr(
       typeNameExpr(typeName(directTypeExpr(l.typerep), baseTypeExpr())),
       location=builtinLoc(MODULE_NAME)
     );
@@ -489,8 +488,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local sizeofTmp :: Expr =
     case ml of
     | justExpr(_) ->
-        unaryExprOrTypeTraitExpr(
-          sizeofOp(location=builtinLoc(MODULE_NAME)),
+        sizeofExpr(
           exprExpr(tmp),
           location=builtinLoc(MODULE_NAME)
         )
