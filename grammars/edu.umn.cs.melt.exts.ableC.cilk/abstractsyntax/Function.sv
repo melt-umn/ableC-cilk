@@ -34,6 +34,9 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
       text("{"), line(), nestlines(2,body.pp), text("}")
     ]);
 
+  fnquals.env = top.env;
+  fnquals.returnType = top.returnType;
+
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
                           | _ -> fname
