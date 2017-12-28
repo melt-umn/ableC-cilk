@@ -959,10 +959,7 @@ abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
-  top.globalDecls := [];
-  top.defs := [];
-  top.freeVariables = [];
-  top.functiondefs := [];
+  top.functionDefs := [];
 
   body.env =
         addEnv(
@@ -991,6 +988,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     then warnStmt([err(builtinLoc(MODULE_NAME), "shadowing variable names in cilk functions is currently not supported")])
     else fastClone;
 
+  -- TODO: Use defsDecl here instead of interfering forward
   forwards to
     fwd
     with {
@@ -1163,12 +1161,7 @@ top::Stmt ::= body::Stmt args::Parameters
 {
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
-  -- top.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  top.globalDecls := [];
-  top.defs := [];
-  top.freeVariables = [];
-  top.functiondefs := [];
+  top.functionDefs := [];
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
@@ -1238,6 +1231,7 @@ top::Stmt ::= body::Stmt args::Parameters
 --      makeSwitchHeaderCases(length(top.syncLocations))
 --    );
 
+  -- TODO: Use defsDecl here instead of interfering forward
   forwards to
     foldStmt([
       argDecls,

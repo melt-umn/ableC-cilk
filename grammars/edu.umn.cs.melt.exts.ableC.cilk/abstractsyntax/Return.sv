@@ -10,7 +10,7 @@ r::Stmt ::= e::MaybeExpr
   r.globalDecls := e.globalDecls;
   r.defs := e.defs;
   r.freeVariables = e.freeVariables;
-  r.functiondefs := [];
+  r.functionDefs := [];
 
   r.cilkFrameDeclsScopes = [];
 

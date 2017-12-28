@@ -10,12 +10,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  -- s.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  s.globalDecls := [];
-  s.defs := [];
-  s.freeVariables = [];
-  s.functiondefs := [];
+  s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -89,12 +84,7 @@ s::Stmt ::= f::Expr args::Exprs
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  -- s.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  s.globalDecls := [];
-  s.defs := [];
-  s.freeVariables = [];
-  s.functiondefs := [];
+  s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
