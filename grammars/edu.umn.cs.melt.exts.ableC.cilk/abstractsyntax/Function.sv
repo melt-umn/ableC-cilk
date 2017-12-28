@@ -988,19 +988,15 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     then warnStmt([err(builtinLoc(MODULE_NAME), "shadowing variable names in cilk functions is currently not supported")])
     else fastClone;
 
-  -- TODO: Use defsDecl here instead of interfering forward
   forwards to
-    fwd
-    with {
-      env =
-        addEnv(
+    seqStmt(
+      declStmt(
+        defsDecl(
           [
             miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
             syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
-          ],
-          top.env
-        );
-    };
+          ])),
+      fwd);
 }
 
 function addFastStuff
@@ -1231,22 +1227,19 @@ top::Stmt ::= body::Stmt args::Parameters
 --      makeSwitchHeaderCases(length(top.syncLocations))
 --    );
 
-  -- TODO: Use defsDecl here instead of interfering forward
   forwards to
     foldStmt([
+      declStmt(
+        defsDecl([
+          miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+          syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+        ])),
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
       restoreVariables(args.env),
       body
-    ])
-  with {
-    env = addEnv([
-        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
-        syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
-      ],
-      top.env);
-  } ;
+    ]);
 }
 
 --function makeSwitchHeaderCases
