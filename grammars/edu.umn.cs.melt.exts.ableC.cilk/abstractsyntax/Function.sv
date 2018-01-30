@@ -223,6 +223,8 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
 
   local frameFields :: [StructItem] =
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
+  
+  body.env = addEnv([miscDef(cilk_in_slow_clone_id, emptyMiscItem())], top.env);
 
   forwards to
     typeExprDecl(nilAttribute(),
@@ -959,7 +961,7 @@ abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
-  top.functionDefs := [];
+  top.functionDefs := body.functionDefs;
 
   body.env =
         addEnv(
@@ -1157,7 +1159,7 @@ top::Stmt ::= body::Stmt args::Parameters
 {
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
-  top.functionDefs := [];
+  top.functionDefs := body.functionDefs;
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
