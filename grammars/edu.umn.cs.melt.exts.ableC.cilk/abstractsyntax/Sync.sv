@@ -57,6 +57,7 @@ s::Stmt ::= loc::Location
 {
   propagate substituted;
   s.pp = text("sync");
+  s.functionDefs := [];
   -- reserve a sync number
   s.syncLocations = [loc];
 

@@ -197,6 +197,7 @@ s::Stmt ::= l::Expr callF::Expr
 {
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
+  s.functionDefs := [];
 
   local lIsGlobal :: Boolean =
     !containsBy(
@@ -320,6 +321,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
+  s.functionDefs := [];
 
   -- reserve a sync number
   s.syncLocations = [loc];
@@ -414,6 +416,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
   propagate substituted;
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
+  top.functionDefs := [];
 
   local l :: Expr =
     case ml of
