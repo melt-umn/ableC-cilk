@@ -224,7 +224,7 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
   local frameFields :: [StructItem] =
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
   
-  body.env = addEnv([miscDef(cilk_in_slow_clone_id, emptyMiscItem())], top.env);
+  body.env = top.env;
 
   forwards to
     typeExprDecl(nilAttribute(),

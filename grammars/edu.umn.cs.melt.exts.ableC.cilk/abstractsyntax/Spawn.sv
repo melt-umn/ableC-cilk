@@ -46,7 +46,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, callF)
     | false,true  -> cilk_slowCloneSpawnWithEqOp(l, callF)
     | true,true   -> error ("We think we're in both a fast and a slow clone!1")
-    | false,false -> error ("We don't think we're in a fast or slow clone!2")
+    | false,false -> exprStmt(eqExpr(l, callF, location=builtinLoc(MODULE_NAME)))
     end;
 
   -- this causes sync to fail because lookupMisc(cilk_in_fast_clone) fails
