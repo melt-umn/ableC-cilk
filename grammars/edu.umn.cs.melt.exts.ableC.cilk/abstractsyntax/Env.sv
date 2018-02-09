@@ -1,10 +1,10 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
-synthesized attribute scopeIds :: Scope<String> occurs on Env;
+synthesized attribute scopeIds :: Scopes<String> occurs on Env;
 synthesized attribute scopeIdContribs :: Contribs<String> occurs on Defs, Def;
 
 -- TODO: do we need envSyncLocations/Contribs? can envSyncLocationsDef be passed down through addEnv without them?
-synthesized attribute envSyncLocations :: Scope<[Location]> occurs on Env;
+synthesized attribute envSyncLocations :: Scopes<[Location]> occurs on Env;
 synthesized attribute envSyncLocationsContribs :: Contribs<[Location]> occurs on Defs, Def;
 
 aspect production emptyEnv_i
@@ -17,11 +17,11 @@ top::Env ::=
 aspect production addEnv_i
 top::Env ::= d::Defs  e::Decorated Env
 {
-  top.scopeIds = augmentScope_i(d.scopeIdContribs, e.scopeIds);
-  top.envSyncLocations = augmentScope_i(d.envSyncLocationsContribs, e.envSyncLocations);
+  top.scopeIds = addScope(d.scopeIdContribs, e.scopeIds);
+  top.envSyncLocations = addScope(d.envSyncLocationsContribs, e.envSyncLocations);
 }
 
-aspect production openScope_i
+aspect production openScopeEnv_i
 top::Env ::= e::Decorated Env
 {
   top.scopeIds = tm:empty(compareString) :: e.scopeIds;
@@ -66,7 +66,7 @@ top::Def ::= s::String scopeId::String
 function lookupScopeId
 [String] ::= n::String  e::Decorated Env
 {
-  return readScope_i(n, e.scopeIds);
+  return lookupScope(n, e.scopeIds);
 }
 
 abstract production syncLocationsDef
@@ -78,6 +78,6 @@ top::Def ::= s::String syncLocations::[Location]
 function lookupSyncLocations
 [[Location]] ::= n::String  e::Decorated Env
 {
-  return readScope_i(n, e.envSyncLocations);
+  return lookupScope(n, e.envSyncLocations);
 }
 

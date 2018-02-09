@@ -223,6 +223,8 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
 
   local frameFields :: [StructItem] =
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
+  
+  body.env = top.env;
 
   forwards to
     typeExprDecl(nilAttribute(),
@@ -959,10 +961,7 @@ abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
-  top.globalDecls := [];
-  top.defs := [];
-  top.freeVariables = [];
-  top.functiondefs := [];
+  top.functionDefs := body.functionDefs;
 
   body.env =
         addEnv(
@@ -992,17 +991,14 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     else fastClone;
 
   forwards to
-    fwd
-    with {
-      env =
-        addEnv(
+    seqStmt(
+      declStmt(
+        defsDecl(
           [
             miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
             syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
-          ],
-          top.env
-        );
-    };
+          ])),
+      fwd);
 }
 
 function addFastStuff
@@ -1163,12 +1159,7 @@ top::Stmt ::= body::Stmt args::Parameters
 {
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
-  -- top.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  top.globalDecls := [];
-  top.defs := [];
-  top.freeVariables = [];
-  top.functiondefs := [];
+  top.functionDefs := body.functionDefs;
 
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
@@ -1240,19 +1231,17 @@ top::Stmt ::= body::Stmt args::Parameters
 
   forwards to
     foldStmt([
+      declStmt(
+        defsDecl([
+          miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+          syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+        ])),
       argDecls,
       startThreadSlow,
       switchHeaderEntry,
       restoreVariables(args.env),
       body
-    ])
-  with {
-    env = addEnv([
-        miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
-        syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
-      ],
-      top.env);
-  } ;
+    ]);
 }
 
 --function makeSwitchHeaderCases

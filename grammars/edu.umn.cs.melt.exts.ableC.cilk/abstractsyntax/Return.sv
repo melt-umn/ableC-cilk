@@ -10,7 +10,7 @@ r::Stmt ::= e::MaybeExpr
   r.globalDecls := e.globalDecls;
   r.defs := e.defs;
   r.freeVariables = e.freeVariables;
-  r.functiondefs := [];
+  r.functionDefs := [];
 
   r.cilkFrameDeclsScopes = [];
 
@@ -28,7 +28,7 @@ r::Stmt ::= e::MaybeExpr
     | true,false  -> cilk_fastCloneReturn(e)
     | false,true  -> cilk_slowCloneReturn(e)
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    | false,false -> returnStmt(e)
     end;
 }
 
@@ -132,6 +132,7 @@ abstract production cilk_slowCloneReturn
 r::Stmt ::= me::MaybeExpr
 {
   r.pp = ppConcat([text("cilk return"), space(), me.pp, semi()]);
+  r.functionDefs := [];
 
   local e :: Expr =
     case me of

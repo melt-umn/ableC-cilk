@@ -10,12 +10,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  -- s.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  s.globalDecls := [];
-  s.defs := [];
-  s.freeVariables = [];
-  s.functiondefs := [];
+  s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -51,7 +46,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, callF)
     | false,true  -> cilk_slowCloneSpawnWithEqOp(l, callF)
     | true,true   -> error ("We think we're in both a fast and a slow clone!1")
-    | false,false -> error ("We don't think we're in a fast or slow clone!2")
+    | false,false -> exprStmt(eqExpr(l, callF, location=builtinLoc(MODULE_NAME)))
     end;
 
   -- this causes sync to fail because lookupMisc(cilk_in_fast_clone) fails
@@ -89,12 +84,7 @@ s::Stmt ::= f::Expr args::Exprs
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
-  -- s.env depends on these, if not set then compiler will crash while looping
-  --  in forwarded stmt to look for these
-  s.globalDecls := [];
-  s.defs := [];
-  s.freeVariables = [];
-  s.functiondefs := [];
+  s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -207,6 +197,7 @@ s::Stmt ::= l::Expr callF::Expr
 {
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
+  s.functionDefs := [];
 
   local lIsGlobal :: Boolean =
     !containsBy(
@@ -330,6 +321,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
   propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
+  s.functionDefs := [];
 
   -- reserve a sync number
   s.syncLocations = [loc];
@@ -424,6 +416,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
   propagate substituted;
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
+  top.functionDefs := [];
 
   local l :: Expr =
     case ml of

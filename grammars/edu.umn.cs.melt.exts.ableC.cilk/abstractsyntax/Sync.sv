@@ -15,7 +15,7 @@ s::Stmt ::= loc::Location
   s.globalDecls := [];
   s.defs := [];
   s.freeVariables = [];
-  s.functiondefs := [];
+  s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -33,7 +33,7 @@ s::Stmt ::= loc::Location
     | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
     | true,true   -> error ("We think we're in both a fast and a slow clone!5")
-    | false,false -> error ("We don't think we're in a fast or slow clone!6")
+    | false,false -> nullStmt()
     end;
 }
 
@@ -57,6 +57,7 @@ s::Stmt ::= loc::Location
 {
   propagate substituted;
   s.pp = text("sync");
+  s.functionDefs := [];
   -- reserve a sync number
   s.syncLocations = [loc];
 
