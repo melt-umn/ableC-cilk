@@ -9,7 +9,7 @@ all: mda mwda
 
 mda:
 	touch $(wildcard determinism/*.sv)
-	silver -o MDA.jar $(SVFLAGS) --clean determinism
+	silver -o MDA.jar $(SVFLAGS) determinism
 
 	@echo ""
 	@echo "This script runs Silver on the grammar that performs the"
