@@ -1,34 +1,80 @@
-# Top-level directory containing ableC repository and extensions folder
-ABLEC_HOME=../../..
 
+# Path from current directory to top level ableC repository
+ABLEC_BASE?=../../../ableC
+# Path from current directory to top level extensions directory
+EXTS_BASE?=../../../extensions
+
+# The jar file to built
+ABLEC_JAR=ableC.jar
+# The artifact specification grammar to compile
+ARTIFACT=artifact
 # All directories containing grammars that may be included
-GRAMMAR_DIRS=$(ABLEC_HOME)/ableC $(ABLEC_HOME)/extensions/ableC-cilk/grammars artifact
-
+GRAMMAR_DIRS=$(ABLEC_BASE) $(wildcard $(EXTS_BASE)/*/grammars)
 # All silver files in included grammars, to be included as dependancies
 GRAMMAR_SOURCES=$(shell find $(GRAMMAR_DIRS) -name *.sv -print0 | xargs -0)
+# Flags passed to silver including the appropriate directories
+override SVFLAGS+=$(addprefix -I ,$(GRAMMAR_DIRS))
 
-EXAMPLES = 
+# All extended C files to compile
+XC_FILES=$(wildcard *.xc)
+# All C files that should be generated
+C_FILES=$(XC_FILES:.xc=.c)
+# All object files that should be generated
+OBJECTS=$(XC_FILES:.xc=.o)
+# All executables that should be generated
+EXECUTABLES=$(XC_FILES:.xc=.out)
+# All evaluation marker files that should be generated
+TESTS=$(XC_FILES:.xc=.test)
 
-all: ableC.jar examples
+# All directories contining extension header files that may be included
+XC_INCLUDE_DIRS=$(wildcard $(EXTS_BASE)/*/include)
+# All header files that may be included, to be included as dependencies
+XC_INCLUDE_SOURCES=$(foreach dir,$(XC_INCLUDE_DIRS),$(wildcard $(dir)/*.*h))
+# Flags passed to ableC including the appropriate directories
+override XCFLAGS+=$(addprefix -I,$(XC_INCLUDE_DIRS)) -I/usr/local/include/cilk 
+# Flags passed to Java when invoking ableC
+override JAVAFLAGS+=-Xss6M
 
-ableC.jar: $(GRAMMAR_SOURCES)
-	touch artifact/Artifact.sv
-	silver -o $@ $(SVFLAGS) -I $(ABLEC_HOME)/ableC \
-		     -I $(ABLEC_HOME)/extensions/ableC-cilk/grammars \
-		     artifact
+# Flags passed to the C compiler, e.g. to enable various compiler extensions
+override CFLAGS+=-O2
 
-fib.c:	fib.xc ableC.jar
-	java -Xss6M -jar ableC.jar fib.xc -I/usr/local/include/cilk -I../include
+# All directories contining extension libraries that may be linked
+LIB_DIRS=$(wildcard $(EXTS_BASE)/*/lib)
+# Flags passed to the linker specifying the appropriate directories
+override LDFLAGS+=$(addprefix -L,$(LIB_DIRS)) -L/usr/local/lib -L/usr/local/lib/cilk
+# Flags passed to the linker specifying libraries to link
+LDLIBS=-lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread -lm
 
-fib.out:	fib.c
-	gcc -xc -I/usr/local/include/cilk -I../include -D__REENTRANT -O2 \
-		fib.c -o fib.out \
-		-L/usr/local/lib -L/usr/local/lib/cilk -lcilkrt0 -lcilk \
-		-Wl,-rpath,/usr/local/lib -pthread -lm
+# All directories contining extension library sources
+SRC_DIRS=$(wildcard $(EXTS_BASE)/*/src)
+# All extension library targets
+LIBS=$(SRC_DIRS:src=libs)
+# All C files used to build libraries, to be included as dependencies
+SRC_SOURCES=$(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
 
-examples:	fib.out
+all: $(ABLEC_JAR) $(C_FILES) $(OBJECTS) $(EXECUTABLES) $(TESTS)
+
+libs: $(LIBS)
+
+$(LIBS):
+	cd $(@:libs=src) && $(MAKE)
+
+$(ABLEC_JAR): $(GRAMMAR_SOURCES)
+	touch $(wildcard $(ARTIFACT)/*.sv)
+	silver -o $@ $(SVFLAGS) $(ARTIFACT)
+
+%.c: %.xc $(XC_INCLUDE_SOURCES) $(ABLEC_JAR)
+	java $(JAVAFLAGS) -jar $(ABLEC_JAR) $< $(XCFLAGS)
+
+%.out: %.o $(SRC_SOURCES) | libs
+	$(CC) $(LDFLAGS) $< $(LOADLIBES) $(LDLIBS) -o $@
+
+%.test: %.out
+	@echo "Running $<..."
+	@./$< || echo "(exit $$?)"
+	touch $@
 
 clean:
-	rm -f *~ *.i *.c *.o *.out *.test *.jar *.copperdump.html build.xml ableC.jar
+	rm -f *~ *.i *.c *.o *.out *.test *.jar *.copperdump.html build.xml
 
-.PHONY: all clean
+.PHONY: all libs $(LIBS) clean

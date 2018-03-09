@@ -1,13 +1,18 @@
+
 # Emacs temp files
 *~
 
+# Silver-related files
 build.xml
+*.copperdump.html
 *.jar
 
-*.pp_out.c
-*.gen_cpp
-
+# Other files
+examples/*.c
+test/**/*.c
+*.i
+*.o
+*.out
+*.test
 *.cilk[ci]
-
-a.out
 *.step1.xc

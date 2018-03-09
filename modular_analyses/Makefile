@@ -1,36 +1,35 @@
-# Top-level directory containing ableC repository and extensions folder
-EXT_HOME=../../..
+
+# Path from current directory to top level ableC repository
+ABLEC_BASE?=../../../ableC
+# Path from current directory to top level extensions directory
+EXTS_BASE?=../../../extensions
+
+# The jar files to built
+MDA_JAR=MDA.jar
+MWDA_JAR=MWDA.jar
+# The artifact specification grammars to compile
+MDA_ARTIFACT=determinism
+MWDA_ARTIFACT=well_definedness
 # All directories containing grammars that may be included
-GRAMMAR_DIRS=$(wildcard $(EXT_HOME)/extensions/*/grammars) $(EXT_HOME)/ableC
+GRAMMAR_DIRS=$(ABLEC_BASE) $(wildcard $(EXTS_BASE)/*/grammars)
+# All silver files in included grammars, to be included as dependancies
+GRAMMAR_SOURCES=$(shell find $(GRAMMAR_DIRS) -name *.sv -print0 | xargs -0)
 # Flags passed to silver including the appropriate directories
-SVFLAGS=$(addprefix -I , $(GRAMMAR_DIRS))
+override SVFLAGS+=$(addprefix -I , $(GRAMMAR_DIRS))
 
 all: mda mwda
 
-mda:
-	touch $(wildcard determinism/*.sv)
-	silver -o MDA.jar $(SVFLAGS) determinism
+mda: $(MDA_JAR)
 
-	@echo ""
-	@echo "This script runs Silver on the grammar that performs the"
-	@echo "modular determinism analysis."
-	@echo "A fair amount of information is displayed to the screen,"
-	@echo "so look for the \"copper_mda:\" task in the output."
-	@echo "There should be a line reading"
-	@echo "   \"Modular determinism analysis passed.\""
-	@echo "that indicates that the analysis was successful."
-	@echo ""
+mwda: $(MWDA_JAR)
 
-mwda:
-	touch $(wildcard well_definedness/*.sv)
-	silver -o MWDA.jar $(SVFLAGS) --clean --warn-all --warn-error well_definedness
-	@echo ""
-	@echo "This script runs Silver on the grammar that performs the"
-	@echo "modular well-definedness analysis."
-	@echo "Note the use of the --warn-all flag."
-	@echo "A fair amount of information is displayed to the screen,"
-	@echo "so look for errors after the \"Checking for Errors.\" line."
-	@echo ""
+$(MDA_JAR): $(GRAMMAR_SOURCES)
+	touch $(wildcard $(MDA_ARTIFACT)/*.sv)
+	silver -o $(MDA_JAR) $(SVFLAGS) --clean $(MDA_ARTIFACT)
+
+$(MWDA_JAR): $(GRAMMAR_SOURCES)
+	touch $(wildcard $(MWDA_ARTIFACT)/*.sv)
+	silver -o $(MWDA_JAR) $(SVFLAGS) --clean --warn-all --warn-error $(MWDA_ARTIFACT)
 
 clean:
 	rm -f *~ *.jar *.copperdump.html build.xml
