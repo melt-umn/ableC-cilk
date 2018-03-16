@@ -130,13 +130,13 @@ s::Stmt ::= f::Expr args::Exprs
     | true,false  -> s.cilkLinksInh
     | false,true  ->
          cons(
-           init(objectInitializer(
+           positionalInit(objectInitializer(
              foldInit([
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
              ])
            )),
            s.cilkLinksInh
@@ -210,13 +210,13 @@ s::Stmt ::= l::Expr callF::Expr
     then s.cilkLinksInh
     else
          cons(
-           init(objectInitializer(
+           positionalInit(objectInitializer(
              foldInit([
-               init(exprInitializer(sizeofL)),
-               init(exprInitializer(frameOffset)),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
+               positionalInit(exprInitializer(sizeofL)),
+               positionalInit(exprInitializer(frameOffset)),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
              ])
            )),
            s.cilkLinksInh

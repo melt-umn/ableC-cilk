@@ -399,7 +399,7 @@ top::Expr ::= l::String
 }
 
 aspect production compoundLiteralExpr
-top::Expr ::= ty::TypeName  init::InitList
+top::Expr ::= ty::TypeName  positionalInit::InitList
 {
   top.cilkFrameDeclsScopes = [];
 }

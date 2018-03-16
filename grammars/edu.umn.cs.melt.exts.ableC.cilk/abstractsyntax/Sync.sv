@@ -65,13 +65,13 @@ s::Stmt ::= loc::Location
 
   s.cilkLinks =
      cons(
-       init(objectInitializer(
+       positionalInit(objectInitializer(
          foldInit([
-           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-           init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
+           positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+           positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
          ])
        )),
        s.cilkLinksInh

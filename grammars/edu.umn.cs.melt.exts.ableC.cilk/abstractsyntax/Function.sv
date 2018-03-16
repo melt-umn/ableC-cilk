@@ -1302,14 +1302,14 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
     objectInitializer(
       foldInit(
         cons(
-          init(
+          positionalInit(
             objectInitializer(
               foldInit([
-                init(exprInitializer(sizeofRet)),
-                init(exprInitializer(sizeofFrame)),
-                init(exprInitializer(slowClone)),
-                init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-                init(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
+                positionalInit(exprInitializer(sizeofRet)),
+                positionalInit(exprInitializer(sizeofFrame)),
+                positionalInit(exprInitializer(slowClone)),
+                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
+                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
               ])
             )
           ),
