@@ -345,7 +345,7 @@ top::Expr ::= e::Expr
 }
 
 aspect production vaArgPackExpr
-top::Expr ::= 
+top::Expr ::=
 {
   top.cilkFrameDeclsScopes = [];
 }
@@ -399,7 +399,7 @@ top::Expr ::= l::String
 }
 
 aspect production compoundLiteralExpr
-top::Expr ::= ty::TypeName  positionalInit::InitList
+top::Expr ::= ty::TypeName  inits::InitList
 {
   top.cilkFrameDeclsScopes = [];
 }
@@ -429,7 +429,7 @@ e::Expr ::= txt::String
 }
 
 aspect production predefinedFuncExpr
-top::Expr ::= 
+top::Expr ::=
 {
   top.cilkFrameDeclsScopes = [];
 }
