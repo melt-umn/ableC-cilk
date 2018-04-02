@@ -9,7 +9,7 @@ build.xml
 
 # Other files
 examples/*.c
-test/**/*.c
+tests/**/*.c
 *.i
 *.o
 *.out
