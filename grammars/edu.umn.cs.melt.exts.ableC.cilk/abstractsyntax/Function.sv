@@ -58,7 +58,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
 
 -- arg struct --------------------------------------------------
 -- again, another syn attr or scope0 of the frame struct information
-  local argStruct :: Decl = makeArgsAndResultStruct(newName, bty, args);
+  local argStruct :: Decl = makeArgsAndResultStruct(newName, bty, retMty, args);
 
   local args :: Parameters =
     case mty of
@@ -73,6 +73,13 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
     case bty of
       builtinTypeExpr(_, voidType()) -> true
     | _                              -> false
+    end;
+
+  local retMty :: TypeModifierExpr =
+    case mty of
+    | functionTypeExprWithArgs(ret, _, _, _) -> ret
+    | functionTypeExprWithoutArgs(ret, _, _) -> ret
+    | _ -> error("expected mty to be functionTypeExpr")
     end;
 
   -- TODO: only add implicit sync/return if necessary
@@ -104,8 +111,8 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
   local importDecl :: Decl = makeImportFunction(newName, importBody);
 
 -- Export Function --------------------------------------------------
-  local exportBody :: Stmt = makeExportBody(newName, bty, args, returnsVoid);
-  local exportDecl :: Decl = makeExportFunction(newName, bty, args, exportBody);
+  local exportBody :: Stmt = makeExportBody(newName, bty, retMty, args, returnsVoid);
+  local exportDecl :: Decl = makeExportFunction(newName, bty, retMty, args, exportBody);
 
   forwards to 
     decls(foldDecl([
@@ -370,16 +377,17 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
    };
 -}
 abstract production makeArgsAndResultStruct
-top::Decl ::= fname::Name  bty::BaseTypeExpr  args::Parameters
+top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Parameters
 {
   top.pp = text("cilkMakeArgsAndResultStruct()");
+
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtinLoc(MODULE_NAME));
   local resultField :: StructItem =
     structItem(
       nilAttribute(),
       bty,
       foldStructDeclarator([
-        structField(name("_cilk_proc_result", location=builtinLoc(MODULE_NAME)), baseTypeExpr(), nilAttribute())
+        structField(name("_cilk_proc_result", location=builtinLoc(MODULE_NAME)), retMty, nilAttribute())
       ])
     );
 
@@ -688,15 +696,14 @@ Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
 }
 
 function makeExportFunction
-Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
+Decl ::= newName::Name bty::BaseTypeExpr retMty::TypeModifierExpr args::Parameters body::Stmt
 {
   local storage :: [StorageClass] = [];
   local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local exportProcName :: Name = name("mt_" ++ newName.name, location=builtinLoc(MODULE_NAME));
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
-  local resultType :: TypeModifierExpr = baseTypeExpr();
-  local mty :: TypeModifierExpr = functionTypeExprWithArgs(resultType, exportFunctionArgs, false, nilQualifier());
+  local mty :: TypeModifierExpr = functionTypeExprWithArgs(retMty, exportFunctionArgs, false, nilQualifier());
   local exportFunctionArgs :: Parameters =
     consParameters(
       parameterDecl(
@@ -722,7 +729,7 @@ Decl ::= newName::Name bty::BaseTypeExpr args::Parameters body::Stmt
 }
 
 function makeExportBody
-Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
+Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::Parameters
               returnsVoid::Boolean
 {
   local procArgsName :: Name = name("_cilk_procargs", location=builtinLoc(MODULE_NAME));
@@ -796,7 +803,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr args::Parameters
           foldDeclarator([
             declarator(
               resultName,
-              baseTypeExpr(),
+              retMty,
               nilAttribute(),
               justInitializer(initResult)
             )

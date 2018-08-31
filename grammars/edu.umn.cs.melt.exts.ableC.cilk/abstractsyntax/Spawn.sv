@@ -122,7 +122,8 @@ s::Stmt ::= f::Expr args::Exprs
     | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr(), f.location)
     | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
     | true,true   -> error ("We think we're in both a fast and a slow clone!3")
-    | false,false -> error ("We don't think we're in a fast or slow clone!4")
+--    | false,false -> error ("We don't think we're in a fast or slow clone!4")
+    | false,false -> exprStmt(callF)
     end;
 
   s.cilkLinks =

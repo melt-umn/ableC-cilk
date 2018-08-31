@@ -88,3 +88,75 @@ top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifi
     end;
 }
 
+aspect production consDecl
+top::Decls ::= h::Decl  t::Decls
+{
+  top.cilkFrameDeclsScopes = h.cilkFrameDeclsScopes ++ t.cilkFrameDeclsScopes;
+}
+
+aspect production nilDecl
+top::Decls ::=
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production decls
+top::Decl ::= d::Decls
+{
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production defsDecl
+top::Decl ::= d::[Def]
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production variableDecls
+top::Decl ::= storage::[StorageClass]  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+{
+  top.cilkFrameDeclsScopes = [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
+}
+
+aspect production typeExprDecl
+top::Decl ::= attrs::Attributes ty::BaseTypeExpr
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production typedefDecls
+top::Decl ::= attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production functionDeclaration
+top::Decl ::= f::FunctionDecl
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production warnDecl
+top::Decl ::= msg::[Message]
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production staticAssertDecl
+top::Decl ::= e::Expr  s::String
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production fileScopeAsm
+top::Decl ::= s::String
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production txtDecl
+top::Decl ::= txt::String
+{
+  top.cilkFrameDeclsScopes = [];
+}
+

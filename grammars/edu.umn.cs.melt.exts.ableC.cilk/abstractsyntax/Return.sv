@@ -40,6 +40,9 @@ r::Stmt ::= e::MaybeExpr
 {
   local tempInt::Integer = genInt();
 
+  r.pp = pp"cilk return ${e.pp}";
+  r.functionDefs := [];
+
   -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
 
   -- expand CILK2C_START_THREAD_FAST() macro
@@ -95,6 +98,12 @@ r::Stmt ::= e::MaybeExpr
       )
     ]);
 
+  local returnType :: Type =
+    case r.returnType of
+    | just(ty)  -> ty
+    | nothing() -> error("returnType is required by cilk return")
+    end;
+
   -- ToDo: extract return type of the function from env and use below.
   -- Now we assume the return type is int.
   -- or use gcc type-of thing.
@@ -103,11 +112,21 @@ r::Stmt ::= e::MaybeExpr
       foldStmt(
         case e.justTheExpr of
         | just(e) ->
-            [ mkIntDeclGeneral(
-                -- TODO: cilk2c numbers tmps (e.g. _cilk_temp0), is this necessary?
-                "_cilk_tmp",
-                justInitializer(exprInitializer(e)),
-                e.location),
+            [
+              declStmt(
+                variableDecls([], nilAttribute(),
+                  returnType.baseTypeExpr,
+                  foldDeclarator([
+                    declarator(
+                      -- TODO: cilk2c numbers tmps (e.g. _cilk_temp0), is this necessary?
+                      name("_cilk_tmp", location=builtinLoc(MODULE_NAME)),
+                      returnType.typeModifierExpr,
+                      nilAttribute(),
+                      justInitializer(exprInitializer(e))
+                    )
+                  ])
+                )
+              ),
               beforeReturnFast,
               returnStmt(
                 justExpr(

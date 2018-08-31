@@ -4,7 +4,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 synthesized attribute syncLocations :: [Location] occurs on Stmt;
 
 -- StructItemList to be put into scopes in cilk frame
-synthesized attribute cilkFrameDeclsScopes :: [Pair<String StructItem>] occurs on Stmt, Expr, Exprs, ExprOrTypeName, Parameters;
+synthesized attribute cilkFrameDeclsScopes :: [Pair<String StructItem>] occurs on Stmt, Expr, Exprs, ExprOrTypeName, Parameters, Decls, Decl;
 
 autocopy    attribute cilkLinksInh :: [Init] occurs on Stmt;
 synthesized attribute cilkLinks    :: [Init] occurs on Stmt;
@@ -49,11 +49,7 @@ top::Stmt ::= msg::[Message]
 aspect production declStmt
 top::Stmt ::= d::Decl
 {
-  top.cilkFrameDeclsScopes =
-    case d of
-    | variableDecls(_, attrs, ty, dcls) ->
-        [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))]
-    end;
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
   top.syncLocations = [];
   top.cilkLinks = top.cilkLinksInh;
 }
