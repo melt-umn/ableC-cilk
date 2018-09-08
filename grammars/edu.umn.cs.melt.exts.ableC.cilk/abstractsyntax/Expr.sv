@@ -6,6 +6,12 @@ top::Expr ::= e::Expr
   top.cilkFrameDeclsScopes = e.cilkFrameDeclsScopes;
 }
 
+aspect production transformedExpr
+top::Expr ::= original::Expr  resolved::Expr
+{
+  top.cilkFrameDeclsScopes = resolved.cilkFrameDeclsScopes;
+}
+
 aspect production arraySubscriptExpr
 top::Expr ::= lhs::Expr  rhs::Expr
 {
