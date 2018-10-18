@@ -231,6 +231,7 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
   local frameFields :: [StructItem] =
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
   
+  args.position = 0;
   body.env = top.env;
 
   forwards to
@@ -394,6 +395,7 @@ top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Pa
   local argFields :: StructItemList = makeArgFields(args);
 
   bty.givenRefId = nothing();
+  args.position = 0;
 
   local fields :: StructItemList =
     case bty.typerep of
@@ -1168,6 +1170,7 @@ top::Stmt ::= body::Stmt args::Parameters
 
   top.functionDefs := body.functionDefs;
 
+  args.position = 0;
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
 
