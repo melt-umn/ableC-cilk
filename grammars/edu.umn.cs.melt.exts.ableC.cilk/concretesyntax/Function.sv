@@ -45,33 +45,72 @@ concrete productions top::CilkFunctionDefinition_c
 
 closed nonterminal CilkInitialFunctionDefinition_c with location, ast<abs:Decl>, givenStmt;
 concrete productions top::CilkInitialFunctionDefinition_c
-| ds::DeclarationSpecifiers_c  d::Declarator_c  l::DeclarationList_c
+| ds::DeclarationSpecifiers_c  d::Declarator_c  l::InitiallyUnqualifiedDeclarationList_c
     {
       ds.givenQualifiers = ds.typeQualifiers;
       d.givenType = abs:baseTypeExpr();
-
-      local bt :: abs:BaseTypeExpr =
-        abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
+      l.givenQualifiers =
+        case baseMT of
+        | abs:functionTypeExprWithArgs(t, p, v, q) -> q
+        | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        end;
 
       local specialSpecifiers :: abs:SpecialSpecifiers =
         foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
+      
+      local bt :: abs:BaseTypeExpr =
+        abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
+      
+      -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
+      local baseMT  :: abs:TypeModifierExpr = d.ast;
+      baseMT.abs:baseType = abs:errorType();
+      baseMT.abs:typeModifiersIn = [];
+      baseMT.abs:returnType = nothing();
+      local mt :: abs:TypeModifierExpr =
+        case l.isDeclListEmpty, baseMT of
+        | false, abs:functionTypeExprWithArgs(t, p, v, q) ->
+          abs:functionTypeExprWithArgs(t, p, v, abs:nilQualifier())
+        | false, abs:functionTypeExprWithoutArgs(t, v, q) ->
+          abs:functionTypeExprWithoutArgs(t, v, abs:nilQualifier())
+        | _, mt -> mt
+        end;
 
       top.ast =
-        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, d.ast, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, mt, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Function are annoying because we have to open a scope, then add the
       -- parameters, and close it after the brace.
       context = lh:beginFunctionScope(d.declaredIdent, d.declaredParamIdents, context);
     }
-| d::Declarator_c  l::DeclarationList_c
+| d::Declarator_c  l::InitiallyUnqualifiedDeclarationList_c
     {
       d.givenType = abs:baseTypeExpr();
+      l.givenQualifiers =
+        case baseMT of
+        | abs:functionTypeExprWithArgs(t, p, v, q) -> q
+        | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        end;
+      
       local bt :: abs:BaseTypeExpr =
         abs:figureOutTypeFromSpecifiers(d.location, abs:nilQualifier(), [], [], []);
+      
+      -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
+      local baseMT  :: abs:TypeModifierExpr = d.ast;
+      baseMT.abs:baseType = abs:errorType();
+      baseMT.abs:typeModifiersIn = [];
+      baseMT.abs:returnType = nothing();
+      local mt :: abs:TypeModifierExpr =
+        case l.isDeclListEmpty, baseMT of
+        | false, abs:functionTypeExprWithArgs(t, p, v, q) ->
+          abs:functionTypeExprWithArgs(t, p, v, abs:nilQualifier())
+        | false, abs:functionTypeExprWithoutArgs(t, v, q) ->
+          abs:functionTypeExprWithoutArgs(t, v, abs:nilQualifier())
+        | _, mt -> mt
+        end;
 
       top.ast =
-        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, d.ast, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, mt, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility
