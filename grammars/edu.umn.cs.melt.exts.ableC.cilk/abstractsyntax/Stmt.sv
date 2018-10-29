@@ -226,4 +226,3 @@ top::Stmt ::= decls::Decls lifted::Stmt
   top.syncLocations = [];
   top.cilkLinks = top.cilkLinksInh;
 }
-
