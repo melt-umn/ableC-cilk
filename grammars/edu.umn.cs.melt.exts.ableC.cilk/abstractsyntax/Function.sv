@@ -13,7 +13,7 @@ top::Decl ::= f::FunctionDecl
 
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
 abstract production cilkFunctionDecl
-top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
+top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
   dcls::Decls  body::Stmt
 {
@@ -28,7 +28,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
   mty.typeModifiersIn = bty.typeModifiers;
 
   top.pp = ppConcat([
-      terminate(space(), map((.pp), storage)),
+      terminate(space(), storage.pps),
       terminate( space(), fnquals.pps ),
       bty.pp, space(), mty.lpp, fname.pp, mty.rpp,
       ppAttributesRHS(attrs), line(),
@@ -129,11 +129,11 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
 }
 
 abstract production cilkFunctionProto
-top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
+top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
 {
   propagate substituted;
-  top.pp = ppConcat([text("cilk "), terminate(space(), map((.pp), storage)), terminate( space(), fnquals.pps ),
+  top.pp = ppConcat([text("cilk "), terminate(space(), storage.pps), terminate( space(), fnquals.pps ),
     bty.pp, space(), mty.lpp, fname.pp, mty.rpp, ppAttributesRHS(attrs), line(),
     semi()]);
 
@@ -158,7 +158,7 @@ top::Decl ::= storage::[StorageClass]  fnquals::SpecialSpecifiers
 
   local slowProto :: Decl =
     variableDecls(
-      [staticStorageClass()],
+      foldStorageClass([staticStorageClass()]),
       nilAttribute(),
       void,
       consDeclarator(
@@ -489,7 +489,7 @@ Stmt ::= arg::Decorated ParameterDecl
   return
     declStmt(
       variableDecls(
-        [], attrs, bty,
+        nilStorageClass(), attrs, bty,
         foldDeclarator([ declarator(n, mty, nilAttribute(), nothingInitializer()) ])
       )
     );
@@ -592,7 +592,7 @@ Stmt ::= cilkFrameVar::Pair<String String>
 function makeImportFunction
 Decl ::= fname::Name body::Stmt
 {
-  local storage :: [StorageClass] = [staticStorageClass()];
+  local storage :: StorageClasses = foldStorageClass([staticStorageClass()]);
   local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local bty :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
   local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=builtinLoc(MODULE_NAME));
@@ -604,14 +604,14 @@ Decl ::= fname::Name body::Stmt
   local importFunctionArgs :: Parameters =
     foldParameterDecl([
       parameterDecl(
-        [],
+        nilStorageClass(),
         typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=builtinLoc(MODULE_NAME))),
         pointerTypeExpr(foldQualifier([constQualifier(location=builtinLoc(MODULE_NAME))]), baseTypeExpr()),
         justName(name("_cilk_ws", location=builtinLoc(MODULE_NAME))),
         nilAttribute()
       ),
       parameterDecl(
-        [],
+        nilStorageClass(),
         directTypeExpr(builtinType(nilQualifier(), voidType())),
         pointerTypeExpr(nilQualifier(), baseTypeExpr()),
         justName(name("_cilk_procargs_v", location=builtinLoc(MODULE_NAME))),
@@ -705,7 +705,7 @@ Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
 function makeExportFunction
 Decl ::= newName::Name bty::BaseTypeExpr retMty::TypeModifierExpr args::Parameters body::Stmt
 {
-  local storage :: [StorageClass] = [];
+  local storage :: StorageClasses = nilStorageClass();
   local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local exportProcName :: Name = name("mt_" ++ newName.name, location=builtinLoc(MODULE_NAME));
   local attrs :: Attributes = nilAttribute();
@@ -714,7 +714,7 @@ Decl ::= newName::Name bty::BaseTypeExpr retMty::TypeModifierExpr args::Paramete
   local exportFunctionArgs :: Parameters =
     consParameters(
       parameterDecl(
-        [],
+        nilStorageClass(),
         typedefTypeExpr(nilQualifier(), name("CilkContext", location=builtinLoc(MODULE_NAME))),
         pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
         justName(name("context", location=builtinLoc(MODULE_NAME))),
@@ -748,7 +748,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
   local procArgsDecl :: Stmt =
     declStmt(
       variableDecls(
-        [],
+        nilStorageClass(),
         nilAttribute(),
         tagReferenceTypeExpr(nilQualifier(), structSEU(), procArgsStructName),
         foldDeclarator([
@@ -804,7 +804,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
     else
       declStmt(
         variableDecls(
-          [],
+          nilStorageClass(),
           nilAttribute(),
           resultType,
           foldDeclarator([
@@ -943,7 +943,7 @@ Decl ::= bty::BaseTypeExpr  mty::Decorated TypeModifierExpr  newName::Name
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([], nilSpecialSpecifier(), bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
+        functionDecl(nilStorageClass(), nilSpecialSpecifier(), bty, addWsToParams(mty), newName, nilAttribute(), dcls, body)
         )
     ]));
 }
@@ -953,7 +953,7 @@ TypeModifierExpr ::= mty::Decorated TypeModifierExpr
 {
   local wsParam :: ParameterDecl =
     parameterDecl(
-      [],
+      nilStorageClass(),
       typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
       pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
       justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
@@ -1030,7 +1030,7 @@ Stmt ::= newName::Name
       exprStmt(comment("declare _cilk_frame and expand CILK2C_INIT_FRAME() macro", location=builtinLoc(MODULE_NAME))),
       declStmt(
         variableDecls(
-          [],
+          nilStorageClass(),
           nilAttribute(),
           tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
           foldDeclarator([
@@ -1139,7 +1139,7 @@ Decl ::= newName::Name dcls::Decls body::Stmt
       -- The fast clone has the header
       --  `signed int fib(CilkWorkerState  *const  _cilk_ws, signed int  n)`
       functionDeclaration(
-        functionDecl([staticStorageClass()], nilSpecialSpecifier(), void, newParams, slowName, nilAttribute(), dcls, body)
+        functionDecl(foldStorageClass([staticStorageClass()]), nilSpecialSpecifier(), void, newParams, slowName, nilAttribute(), dcls, body)
         )
     ]));
 }
@@ -1151,7 +1151,7 @@ Parameters ::= newName::Name
 
   local wsParam :: ParameterDecl =
     parameterDecl(
-      [],
+      nilStorageClass(),
       typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
       pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
       justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
@@ -1159,7 +1159,7 @@ Parameters ::= newName::Name
     );
   local frame :: ParameterDecl =
     parameterDecl(
-      [],
+      nilStorageClass(),
       tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
       pointerTypeExpr(nilQualifier(), baseTypeExpr()),
       justName(name("_cilk_frame", location=builtinLoc(MODULE_NAME))),
@@ -1339,7 +1339,7 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
     decls(foldDecl([
       inCCode(),
       variableDecls(
-        [staticStorageClass()],
+        foldStorageClass([staticStorageClass()]),
         nilAttribute(),
         typedefTypeExpr(nilQualifier(), name("CilkProcInfo", location=builtinLoc(MODULE_NAME))),
         foldDeclarator([

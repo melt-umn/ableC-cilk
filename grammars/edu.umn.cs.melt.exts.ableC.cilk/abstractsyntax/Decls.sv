@@ -58,7 +58,7 @@ top::Parameters ::=
 }
 
 aspect production parameterDecl
-top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
+top::ParameterDecl ::= storage::StorageClasses bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
 {
   local n :: Name =
     case name.maybename of
@@ -119,7 +119,7 @@ top::Decl ::= decls::Decls
 }
 
 aspect production variableDecls
-top::Decl ::= storage::[StorageClass]  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+top::Decl ::= storage::StorageClasses  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
 {
   top.cilkFrameDeclsScopes = [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
 }
