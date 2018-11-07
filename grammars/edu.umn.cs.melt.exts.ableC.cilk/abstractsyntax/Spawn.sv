@@ -430,7 +430,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
-      variableDecls([], nilAttribute(),
+      variableDecls(nilStorageClass(), nilAttribute(),
         directTypeExpr(l.typerep),
         foldDeclarator([
           declarator(

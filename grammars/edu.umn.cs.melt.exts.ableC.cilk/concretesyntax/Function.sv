@@ -38,7 +38,7 @@ concrete productions top::CilkFunctionDefinition_c
 
     top.ast =
       cilkFunctionProto(
-        ds.storageClass, specialSpecifiers, bt, d.ast,
+        abs:foldStorageClass(ds.storageClass), specialSpecifiers, bt, d.ast,
         d.declaredIdent, ds.attributes
       );
   }
@@ -76,7 +76,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         end;
 
       top.ast =
-        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, mt, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(abs:foldStorageClass(ds.storageClass), specialSpecifiers, bt, mt, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Function are annoying because we have to open a scope, then add the
@@ -110,7 +110,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         end;
 
       top.ast =
-        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, mt, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(abs:nilStorageClass(), abs:nilSpecialSpecifier(), bt, mt, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility

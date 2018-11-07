@@ -116,7 +116,7 @@ r::Stmt ::= e::MaybeExpr
         | just(e) ->
             [
               declStmt(
-                variableDecls([], nilAttribute(),
+                variableDecls(nilStorageClass(), nilAttribute(),
                   returnType.baseTypeExpr,
                   foldDeclarator([
                     declarator(
@@ -169,7 +169,7 @@ r::Stmt ::= me::MaybeExpr
   local tmpName :: Name = name(tmpNameStr, location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
-      variableDecls([], nilAttribute(),
+      variableDecls(nilStorageClass(), nilAttribute(),
         directTypeExpr(e.typerep),
         foldDeclarator([
           declarator(
