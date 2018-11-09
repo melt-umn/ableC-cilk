@@ -46,6 +46,23 @@ top::Stmt ::= msg::[Message]
   top.cilkLinks = top.cilkLinksInh;
 }
 
+aspect production decStmt
+top::Stmt ::= s::Decorated Stmt
+{
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
+  top.syncLocations = s.syncLocations;
+  top.cilkLinks =
+    -- TODO: This is a slight performance issue since we are redecorating s,
+    -- and is annoying to have to write.  Some notion of decorated forwarding
+    -- to replace these dec* productions would be nice to have instead.
+    decorate new(s) with {
+      env = top.env;
+      returnType = top.returnType;
+      cilkLinksInh = top.cilkLinksInh;
+      cilkProcName = top.cilkProcName;
+    }.cilkLinks;
+}
+
 aspect production declStmt
 top::Stmt ::= d::Decl
 {

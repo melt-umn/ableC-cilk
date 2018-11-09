@@ -148,6 +148,12 @@ top::Decl ::= msg::[Message]
   top.cilkFrameDeclsScopes = [];
 }
 
+aspect production decDecl
+top::Decl ::= d::Decorated Decl
+{
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
 aspect production staticAssertDecl
 top::Decl ::= e::Expr  s::String
 {

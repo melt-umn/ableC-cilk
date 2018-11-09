@@ -416,6 +416,12 @@ top::Expr ::= msg::[Message]
   top.cilkFrameDeclsScopes = [];
 }
 
+aspect production decExpr
+top::Expr ::= e::Decorated Expr
+{
+  top.cilkFrameDeclsScopes = e.cilkFrameDeclsScopes;
+}
+
 aspect production qualifiedExpr
 top::Expr ::= q::Qualifiers e::Expr
 {
