@@ -154,6 +154,13 @@ top::Decl ::= d::Decorated Decl
   top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
 }
 
+aspect production deferredDecl
+top::Decl ::= refId::String  d::Decl
+{
+  -- TODO: Not sure if this is right, good enough for now?
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
 aspect production staticAssertDecl
 top::Decl ::= e::Expr  s::String
 {
