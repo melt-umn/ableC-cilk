@@ -14,7 +14,7 @@ s::Stmt ::= loc::Location
   --  in forwarded stmt to look for these
   s.globalDecls := [];
   s.defs := [];
-  s.freeVariables = [];
+  s.freeVariables := [];
   s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];

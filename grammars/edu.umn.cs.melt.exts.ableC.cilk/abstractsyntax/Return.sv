@@ -10,7 +10,6 @@ r::Stmt ::= e::MaybeExpr
   --  in forwarded returnStmt to look for these
   r.globalDecls := e.globalDecls;
   r.defs := e.defs;
-  r.freeVariables = e.freeVariables;
   r.functionDefs := [];
 
   r.cilkFrameDeclsScopes = [];
