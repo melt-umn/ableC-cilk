@@ -39,5 +39,7 @@ cilk int main(int argc,  char **argv) {
   spawn res = fold(add, 1, size, data);
   sync;
   printf("Result: %f\n", res);
+
+  cilk return 0;
 }
 
