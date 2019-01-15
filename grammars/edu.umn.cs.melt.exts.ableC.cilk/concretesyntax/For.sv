@@ -2,7 +2,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax;
 
 -- Import host language components
 import edu:umn:cs:melt:ableC:concretesyntax;
-import edu:umn:cs:melt:ableC:concretesyntax:lexerHack as lh;
 import edu:umn:cs:melt:ableC:abstractsyntax:host as abs;
 import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 
