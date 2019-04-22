@@ -3,7 +3,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 imports edu:umn:cs:melt:ableC:abstractsyntax:host;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction;
 imports edu:umn:cs:melt:ableC:abstractsyntax:env;
-imports edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 
 aspect production functionDeclaration
 top::Decl ::= f::FunctionDecl
@@ -17,7 +16,6 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
   dcls::Decls  body::Stmt
 {
-  propagate substituted;
   -- ToDo: check that storage, fnquals, and attrs are empty
       -- or just remove them?  I guess supporting them in concrete syntax
       -- could lead to nicer error messages than a parse error.
@@ -132,7 +130,6 @@ abstract production cilkFunctionProto
 top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty::BaseTypeExpr mty::TypeModifierExpr  fname::Name  attrs::Attributes
 {
-  propagate substituted;
   top.pp = ppConcat([text("cilk "), terminate(space(), storage.pps), terminate( space(), fnquals.pps ),
     bty.pp, space(), mty.lpp, fname.pp, mty.rpp, ppAttributesRHS(attrs), line(),
     semi()]);
@@ -217,7 +214,6 @@ global cilk_sync_locations_id::String = "cilk_sync_locations_id";
 abstract production makeFrame
 top::Decl ::= newName::Name args::Parameters body::Stmt
 {
-  propagate substituted;
   top.pp = text("cilkMakeFrame()");
   local header :: StructItem =
     structItem(
@@ -384,7 +380,6 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
 abstract production makeArgsAndResultStruct
 top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Parameters
 {
-  propagate substituted;
   top.pp = text("cilkMakeArgsAndResultStruct()");
 
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtinLoc(MODULE_NAME));
@@ -974,7 +969,6 @@ TypeModifierExpr ::= mty::Decorated TypeModifierExpr
 abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
-  propagate substituted;
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
   top.functionDefs := body.functionDefs;
 
@@ -1172,7 +1166,6 @@ Parameters ::= newName::Name
 abstract production transformSlowClone
 top::Stmt ::= body::Stmt args::Parameters
 {
-  propagate substituted;
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
   top.functionDefs := body.functionDefs;
