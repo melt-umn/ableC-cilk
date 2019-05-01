@@ -116,6 +116,9 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   local exportBody :: Stmt = makeExportBody(newName, bty, retMty, args, returnsVoid);
   local exportDecl :: Decl = makeExportFunction(newName, bty, retMty, args, exportBody);
 
+-- Wrapper Function -------------------------------------------------
+  local wrapperDecl :: Decl = makeWrapperFunction(newName, bty, retMty, args, returnsVoid, top.env);
+
   forwards to 
     decls(foldDecl([
       frameStruct,
@@ -124,7 +127,8 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
       linkage,
       fastCloneDecl,
       importDecl,
-      exportDecl
+      exportDecl,
+      wrapperDecl
     ]));
 }
 

@@ -26,14 +26,14 @@ s::Stmt ::= loc::Location
     | true,false  -> forward.errors
     | false,true  -> forward.errors
     | true,true   -> []
-    | false,false -> []
+    | false,false -> forward.errors
     end;
 
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
     | true,true   -> error ("We think we're in both a fast and a slow clone!5")
-    | false,false -> nullStmt()
+    | false,false -> non_cilk_sync(loc)
     end;
 }
 

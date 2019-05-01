@@ -38,7 +38,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
     | true,false  -> forward.errors
     | false,true  -> forward.errors
     | true,true   -> []
-    | false,false -> []
+    | false,false -> forward.errors
     end;
 
   local spawnStmt :: Stmt =
@@ -46,7 +46,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, callF)
     | false,true  -> cilk_slowCloneSpawnWithEqOp(l, callF)
     | true,true   -> error ("We think we're in both a fast and a slow clone!1")
-    | false,false -> exprStmt(eqExpr(l, callF, location=builtinLoc(MODULE_NAME)))
+    | false,false -> non_cilk_spawn(just(l), f, args)
     end;
 
   -- this causes sync to fail because lookupMisc(cilk_in_fast_clone) fails
@@ -59,11 +59,14 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
   -- in same error as above when we collect errors from f and args
   
   forwards to
-    foldStmt([
-      setHeaderEntry,
-      saveVariables(s.env),
-      spawnStmt
-    ]);
+    if !fast && !slow
+    then spawnStmt
+    else
+      foldStmt([
+        setHeaderEntry,
+        saveVariables(s.env),
+        spawnStmt
+      ]);
 }
 
 abstract production cilk_fastCloneSpawnWithEqOp
@@ -114,7 +117,7 @@ s::Stmt ::= f::Expr args::Exprs
     | true,false  -> forward.errors
     | false,true  -> forward.errors
     | true,true   -> []
-    | false,false -> []
+    | false,false -> forward.errors
     end;
 
   local spawnStmt :: Stmt =
@@ -123,7 +126,7 @@ s::Stmt ::= f::Expr args::Exprs
     | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
     | true,true   -> error ("We think we're in both a fast and a slow clone!3")
 --    | false,false -> error ("We don't think we're in a fast or slow clone!4")
-    | false,false -> exprStmt(callF)
+    | false,false -> non_cilk_spawn(nothing(), f, args)
     end;
 
   s.cilkLinks =
@@ -143,17 +146,20 @@ s::Stmt ::= f::Expr args::Exprs
            s.cilkLinksInh
          )
     | true,true   -> error ("We think we're in both a fast and a slow clone!")
-    | false,false -> error ("We don't think we're in a fast or slow clone!")
+    | false,false -> nil ()
     end;
 
   forwards to
-    compoundStmt(
-      foldStmt([
-        setHeaderEntry,
-        saveVariables(s.env),
-        spawnStmt
-      ])
-    );
+    if !fast && !slow
+    then spawnStmt
+    else
+      compoundStmt(
+        foldStmt([
+          setHeaderEntry,
+          saveVariables(s.env),
+          spawnStmt
+        ])
+      );
 }
 
 abstract production cilk_fastCloneSpawn
