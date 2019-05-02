@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <cilk.xh>
 
+#include <cilk-ableC.h>
+
 cilk int fib(int n);
 
 cilk int main(int argc,  char **argv) {
