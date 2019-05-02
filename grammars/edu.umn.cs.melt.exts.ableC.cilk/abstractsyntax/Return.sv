@@ -3,7 +3,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 abstract production cilk_returnStmt
 r::Stmt ::= e::MaybeExpr
 {
-  propagate substituted;
   r.pp = ppConcat ([ text("cilk"), space(), text("return"), space(), parens(e.pp) ]);
 
   -- r.env depends on these, if not set then compiler will crash while looping
@@ -38,7 +37,6 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_fastCloneReturn
 r::Stmt ::= e::MaybeExpr
 {
-  propagate substituted;
   local tempInt::Integer = genInt();
 
   r.pp = pp"cilk return ${e.pp}";
@@ -151,7 +149,6 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_slowCloneReturn
 r::Stmt ::= me::MaybeExpr
 {
-  propagate substituted;
   r.pp = ppConcat([text("cilk return"), space(), me.pp, semi()]);
   r.functionDefs := [];
 
