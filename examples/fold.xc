@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cilk.xh>
+#include <cilk-ableC.h>
 
 cilk double fold(double (*op)(double, double), double init, size_t len, double *data);
 cilk double fold(double (*op)(double, double), double init, size_t len, double *data) {
