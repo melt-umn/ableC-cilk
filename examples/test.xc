@@ -56,9 +56,9 @@ int main(int argc,  char **argv) {
 
   x = 5;
 
-  int _cilk_join_counter = 0;
-  pthread_mutex_t _cilk_join_lock = PTHREAD_MUTEX_INITIALIZER;
-  pthread_cond_t _cilk_join_cv = PTHREAD_COND_INITIALIZER;
+  //int _cilk_join_counter = 0;
+  //pthread_mutex_t _cilk_join_lock = PTHREAD_MUTEX_INITIALIZER;
+  //pthread_cond_t _cilk_join_cv = PTHREAD_COND_INITIALIZER;
 
   int res;
   spawn res = test(20);

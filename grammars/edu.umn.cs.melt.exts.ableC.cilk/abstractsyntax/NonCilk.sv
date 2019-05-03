@@ -3,7 +3,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 abstract production non_cilk_spawn
 top::Stmt ::= l::Maybe<Expr> f::Expr args::Exprs
 {
-  propagate substituted;
   top.pp = ppConcat([ text("spawn"), space(), 
                     if l.isJust 
                     then ppConcat([l.fromJust.pp, space(), text("="), space()])
@@ -51,7 +50,32 @@ top::Stmt ::= l::Maybe<Expr> f::Expr args::Exprs
   forwards to
     if !null(lErrors)
     then warnStmt(lErrors)
-    else fwrd;
+    else let cilkVars::Decls =
+      consDecl(maybeValueDecl("_cilk_join_counter", 
+        variableDecls(nilStorageClass(), nilAttribute(),
+        builtinTypeExpr(nilQualifier(), signedType(intType())),
+        consDeclarator(declarator(name("_cilk_join_counter", location=loc),
+          baseTypeExpr(), nilAttribute(), 
+          justInitializer(exprInitializer(mkIntConst(0, loc)))),
+          nilDeclarator()))),
+      consDecl(maybeValueDecl("_cilk_join_lock",
+        variableDecls(nilStorageClass(), nilAttribute(),
+        typedefTypeExpr(nilQualifier(), name("pthread_mutex_t", location=loc)),
+        consDeclarator(declarator(name("_cilk_join_lock", location=loc),
+          baseTypeExpr(), nilAttribute(),
+          justInitializer(objectInitializer(consInit(
+            positionalInit(exprInitializer(mkIntConst(0, loc))), nilInit())))),
+          nilDeclarator()))),
+      consDecl(maybeValueDecl("_cilk_join_cv",
+        variableDecls(nilStorageClass(), nilAttribute(),
+        typedefTypeExpr(nilQualifier(), name("pthread_cond_t", location=loc)),
+        consDeclarator(declarator(name("_cilk_join_cv", location=loc),
+          baseTypeExpr(), nilAttribute(),
+          justInitializer(objectInitializer(consInit(
+            positionalInit(exprInitializer(mkIntConst(0, loc))), nilInit())))),
+          nilDeclarator()))),
+      nilDecl())))
+    in injectFunctionDeclsStmt(cilkVars, fwrd) end;
 }
 
 abstract production non_cilk_sync
