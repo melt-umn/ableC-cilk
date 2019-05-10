@@ -123,7 +123,7 @@ void init_cilk_ableC(int threads) {
       (void**) args, cilk_message_handler, cilk_cleanup, context, NULL);
 
   Cilk_free(args);
-
+  
   Cilk_global_init_2(context);
   Cilk_scheduler_init_2(context);
   context->Cilk_RO_params->invoke_main = NULL;

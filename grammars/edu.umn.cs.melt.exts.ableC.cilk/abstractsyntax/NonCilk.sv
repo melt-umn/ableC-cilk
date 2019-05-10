@@ -75,7 +75,7 @@ top::Stmt ::= l::Maybe<Expr> f::Expr args::Exprs
             positionalInit(exprInitializer(mkIntConst(0, loc))), nilInit())))),
           nilDeclarator()))),
       nilDecl())))
-    in injectFunctionDeclsStmt(cilkVars, fwrd) end;
+    in seqStmt(declStmt(injectFunctionDeclsDecl(cilkVars)), fwrd) end;
 }
 
 abstract production non_cilk_sync
