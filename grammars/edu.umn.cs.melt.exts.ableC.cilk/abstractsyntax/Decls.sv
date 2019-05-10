@@ -118,6 +118,12 @@ top::Decl ::= decls::Decls
   top.cilkFrameDeclsScopes = [];
 }
 
+aspect production injectFunctionDeclsDecl
+top::Decl ::= decls::Decls
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
 aspect production variableDecls
 top::Decl ::= storage::StorageClasses  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
 {
