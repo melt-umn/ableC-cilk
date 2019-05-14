@@ -243,11 +243,3 @@ top::Stmt ::= decls::Decls lifted::Stmt
   top.syncLocations = [];
   top.cilkLinks = top.cilkLinksInh;
 }
-
-aspect production injectFunctionDeclsStmt
-top::Stmt ::= decls::Decls lifted::Stmt
-{
-  top.cilkFrameDeclsScopes = lifted.cilkFrameDeclsScopes;
-  top.syncLocations = [];
-  top.cilkLinks = top.cilkLinksInh;
-}
