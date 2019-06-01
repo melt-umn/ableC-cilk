@@ -1,0 +1,18 @@
+ide_specification for edu:umn:cs:melt:exts:ableC:cilk:concretesyntax {
+  terminal Cilk_t {
+    atomMarkupName = storage.modifier;
+  };
+
+  terminal CilkExit_t {
+    atomMarkupName = keyword.control;
+  };
+  
+  terminal CilkSpawn_t {
+    atomMarkupName = keyword.control;
+  };
+
+  terminal CilkSync_t {
+    atomMarkupName = keyword.control;
+  };
+
+}
