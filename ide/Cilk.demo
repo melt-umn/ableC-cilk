@@ -1,0 +1,18 @@
+ide_specification for edu:umn:cs:melt:exts:ableC:cilk:concretesyntax {
+  terminal Cilk_t {
+    atomMarkupName = keyword.other.extension;
+  };
+
+  terminal CilkExit_t {
+    atomMarkupName = keyword.other.extension;
+  };
+  
+  terminal CilkSpawn_t {
+    atomMarkupName = keyword.other.extension;
+  };
+
+  terminal CilkSync_t {
+    atomMarkupName = keyword.other.extension;
+  };
+
+}
