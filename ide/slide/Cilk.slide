@@ -1,3 +1,4 @@
+specification Standard;
 ide_specification for edu:umn:cs:melt:exts:ableC:cilk:concretesyntax {
   terminal Cilk_t {
     atomMarkupName = storage.modifier;
