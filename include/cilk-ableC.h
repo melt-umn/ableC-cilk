@@ -70,7 +70,7 @@ void cilk_cleanup(void* arg) {
   Cilk_ableC_terminate(context);
 }
 
-void init_cilk_ableC(int threads) {
+void init_cilk_ableC(int threads, int ablecId) {
   CilkContext* context;
 
   Cilk_create_context(&context);
@@ -119,7 +119,7 @@ void init_cilk_ableC(int threads) {
     args[i] = &(USE_SHARED1(thrd_params_array)[i]);
   }
 
-  init_thread_pool(threads, 2/*TODO: USE CILK ID*/, (void (*)(void*))Cilk_child_main,
+  init_thread_pool(threads, ablecId, (void (*)(void*))Cilk_child_main,
       (void**) args, cilk_message_handler, cilk_cleanup, context, NULL);
 
   Cilk_free(args);

@@ -40,25 +40,10 @@ cilk void func(int n) {
   x += y;
 }
 
-void setup_thread_system() {
-  init_thread_system();
-
-  int retVal = atexit(destroy_thread_system);
-  if(retVal != 0) {
-    fprintf(stderr, "Error in atexit setup from setup_thread_system\n");
-    exit(-1);
-  }
-}
+%parallel edu:umn:cs:melt:exts:ableC:cilk=0.5
 
 int main(int argc,  char **argv) {
-  setup_thread_system();
-  init_cilk_ableC(2);
-
   x = 5;
-
-  //int _cilk_join_counter = 0;
-  //pthread_mutex_t _cilk_join_lock = PTHREAD_MUTEX_INITIALIZER;
-  //pthread_cond_t _cilk_join_cv = PTHREAD_COND_INITIALIZER;
 
   int res;
   spawn res = test(20);

@@ -81,7 +81,7 @@ top::Stmt ::= l::Maybe<Expr> f::Expr args::Exprs
 abstract production non_cilk_sync
 top::Stmt ::= loc::Location
 {
-  top.pp = text("spawn;");
+  top.pp = text("sync;");
 
   forwards to
     performLocked(
@@ -98,6 +98,18 @@ top::Stmt ::= loc::Location
             addressOfExpr(useVariable("_cilk_join_lock", loc), location=loc)]),
           location=loc))
       ), loc);
+}
+
+abstract production checkAndSyncNonCilk
+top::Stmt ::= loc::Location
+{
+  top.pp = text("");
+  top.functionDefs := [];
+  
+  forwards to
+    if !null(lookupValue("_cilk_join_counter", top.env))
+    then non_cilk_sync(loc)
+    else nullStmt();
 }
 
 function makeWrapperFunction
@@ -451,7 +463,7 @@ Stmt ::= fNm::String loc::Location
     seqStmt(
       exprStmt(directCallExpr(
         name("get_thread_pool", location=loc),
-        foldExpr(mkIntConst(2, loc) :: -- TODO: Should use Cilk_num rather than 2
+        foldExpr(mkIntConst(PARALLEL_EXTENSION_NUMBER, loc) ::
           addressOfExpr(useVariable("__pool", loc), location=loc) :: []),
         location=loc
       )),

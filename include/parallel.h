@@ -189,6 +189,16 @@ void destroy_thread_system() {
   free(thread_list.list);
 }
 
+void setup_thread_system() {
+  init_thread_system();
+
+  int retVal = atexit(destroy_thread_system);
+  if(retVal != 0) {
+    fprintf(stderr, "Error in atexit setup from setup_thread_system\n");
+    exit(-1);
+  }
+}
+
 struct launcher_info {
   void (*func)(void*);
   void* arg;

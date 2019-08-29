@@ -31,7 +31,7 @@ s::Stmt ::= loc::Location
   forwards to case fast,slow of
     | true,false  -> cilk_fastCloneSync(loc)
     | false,true  -> cilk_slowCloneSync(loc)
-    | true,true   -> error ("We think we're in both a fast and a slow clone!5")
+    | true,true   -> error ("We think we're in both a fast and a slow clone!")
     | false,false -> non_cilk_sync(loc)
     end;
 }
@@ -47,7 +47,8 @@ s::Stmt ::= loc::Location
     foldStmt([
       exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=builtinLoc(MODULE_NAME))),
       parseStmt("Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);"),
+      checkAndSyncNonCilk(loc)
     ]);
 }
 
@@ -126,6 +127,7 @@ s::Stmt ::= loc::Location
       saveVariables(s.env),
       recoveryStmt,
       restoreVariables(s.env), -- TODO: should this be here?
+      checkAndSyncNonCilk(loc),
       afterSyncSlow,
       atThreadBoundary
     ]);

@@ -9,4 +9,3 @@ construct ableC as
   edu:umn:cs:melt:ableC:concretesyntax
 translator using
   edu:umn:cs:melt:exts:ableC:cilk;
-
