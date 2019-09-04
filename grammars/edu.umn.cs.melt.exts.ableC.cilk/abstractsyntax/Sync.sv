@@ -7,14 +7,13 @@ import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 abstract production cilk_syncStmt
 s::Stmt ::= loc::Location
 {
-  propagate substituted;
   s.pp = text("sync");
 
   -- s.env depends on these, if not set then compiler will crash while looping
   --  in forwarded stmt to look for these
   s.globalDecls := [];
   s.defs := [];
-  s.freeVariables = [];
+  s.freeVariables := [];
   s.functionDefs := [];
 
   s.cilkFrameDeclsScopes = [];
@@ -55,7 +54,6 @@ s::Stmt ::= loc::Location
 abstract production cilk_slowCloneSync
 s::Stmt ::= loc::Location
 {
-  propagate substituted;
   s.pp = text("sync");
   s.functionDefs := [];
   -- reserve a sync number

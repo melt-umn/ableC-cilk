@@ -58,7 +58,7 @@ top::Parameters ::=
 }
 
 aspect production parameterDecl
-top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
+top::ParameterDecl ::= storage::StorageClasses bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
 {
   local n :: Name =
     case name.maybename of
@@ -86,5 +86,102 @@ top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifi
       [scopeIdDef(n.name, scopeId)]
     | _       -> []
     end;
+}
+
+aspect production consDecl
+top::Decls ::= h::Decl  t::Decls
+{
+  top.cilkFrameDeclsScopes = h.cilkFrameDeclsScopes ++ t.cilkFrameDeclsScopes;
+}
+
+aspect production nilDecl
+top::Decls ::=
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production decls
+top::Decl ::= d::Decls
+{
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production defsDecl
+top::Decl ::= d::[Def]
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production injectGlobalDeclsDecl
+top::Decl ::= decls::Decls
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production injectFunctionDeclsDecl
+top::Decl ::= decls::Decls
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production variableDecls
+top::Decl ::= storage::StorageClasses  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+{
+  top.cilkFrameDeclsScopes = [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
+}
+
+aspect production typeExprDecl
+top::Decl ::= attrs::Attributes ty::BaseTypeExpr
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production typedefDecls
+top::Decl ::= attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production functionDeclaration
+top::Decl ::= f::FunctionDecl
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production warnDecl
+top::Decl ::= msg::[Message]
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production decDecl
+top::Decl ::= d::Decorated Decl
+{
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production deferredDecl
+top::Decl ::= refId::String  d::Decl
+{
+  -- TODO: Not sure if this is right, good enough for now?
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production staticAssertDecl
+top::Decl ::= e::Expr  s::String
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production fileScopeAsm
+top::Decl ::= s::String
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production txtDecl
+top::Decl ::= txt::String
+{
+  top.cilkFrameDeclsScopes = [];
 }
 

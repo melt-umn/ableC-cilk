@@ -35,6 +35,20 @@ top::Env ::= e::Decorated Env
   top.envSyncLocations = [last(e.envSyncLocations)];
 }
 
+aspect production nonGlobalEnv_i
+top::Env ::= e::Decorated Env
+{
+  top.scopeIds = init(e.scopeIds);
+  top.envSyncLocations = init(e.envSyncLocations);
+}
+
+aspect production functionEnv_i
+top::Env ::= e::Decorated Env
+{
+  top.scopeIds = functionScope(e.scopeIds);
+  top.envSyncLocations = functionScope(e.envSyncLocations);
+}
+
 aspect production nilDefs
 top::Defs ::=
 {

@@ -4,7 +4,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 synthesized attribute syncLocations :: [Location] occurs on Stmt;
 
 -- StructItemList to be put into scopes in cilk frame
-synthesized attribute cilkFrameDeclsScopes :: [Pair<String StructItem>] occurs on Stmt, Expr, Exprs, ExprOrTypeName, Parameters;
+synthesized attribute cilkFrameDeclsScopes :: [Pair<String StructItem>] occurs on Stmt, Expr, Exprs, ExprOrTypeName, Parameters, Decls, Decl;
 
 autocopy    attribute cilkLinksInh :: [Init] occurs on Stmt;
 synthesized attribute cilkLinks    :: [Init] occurs on Stmt;
@@ -46,14 +46,27 @@ top::Stmt ::= msg::[Message]
   top.cilkLinks = top.cilkLinksInh;
 }
 
+aspect production decStmt
+top::Stmt ::= s::Decorated Stmt
+{
+  top.cilkFrameDeclsScopes = s.cilkFrameDeclsScopes;
+  top.syncLocations = s.syncLocations;
+  top.cilkLinks =
+    -- TODO: This is a slight performance issue since we are redecorating s,
+    -- and is annoying to have to write.  Some notion of decorated forwarding
+    -- to replace these dec* productions would be nice to have instead.
+    decorate new(s) with {
+      env = top.env;
+      returnType = top.returnType;
+      cilkLinksInh = top.cilkLinksInh;
+      cilkProcName = top.cilkProcName;
+    }.cilkLinks;
+}
+
 aspect production declStmt
 top::Stmt ::= d::Decl
 {
-  top.cilkFrameDeclsScopes =
-    case d of
-    | variableDecls(_, attrs, ty, dcls) ->
-        [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))]
-    end;
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
   top.syncLocations = [];
   top.cilkLinks = top.cilkLinksInh;
 }
@@ -230,4 +243,3 @@ top::Stmt ::= decls::Decls lifted::Stmt
   top.syncLocations = [];
   top.cilkLinks = top.cilkLinksInh;
 }
-
