@@ -6,7 +6,6 @@ import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr f::Expr args::Exprs
 {
-  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
@@ -81,7 +80,6 @@ s::Stmt ::= l::Expr callF::Expr
 abstract production cilkSpawnStmtNoEqOp
 s::Stmt ::= f::Expr args::Exprs
 {
-  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   s.functionDefs := [];
@@ -196,7 +194,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 abstract production cilk_slowCloneSpawnWithEqOp
 s::Stmt ::= l::Expr callF::Expr
 {
-  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
   s.functionDefs := [];
 
@@ -320,7 +317,6 @@ s::Stmt ::= l::Expr callF::Expr
 abstract production cilk_slowCloneSpawn
 s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
-  propagate substituted;
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
   s.functionDefs := [];
 
@@ -415,7 +411,6 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 abstract production makeXPopFrame
 top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
-  propagate substituted;
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
   top.functionDefs := [];
 
@@ -430,7 +425,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
-      variableDecls([], nilAttribute(),
+      variableDecls(nilStorageClass(), nilAttribute(),
         directTypeExpr(l.typerep),
         foldDeclarator([
           declarator(

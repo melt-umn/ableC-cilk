@@ -27,7 +27,7 @@ Stmt ::= f::Expr args::Exprs
     compoundStmt(
       foldStmt([
         declStmt(
-          variableDecls([], nilAttribute(),
+          variableDecls(nilStorageClass(), nilAttribute(),
             directTypeExpr(builtinType(nilQualifier(), signedType(intType()))),
             foldDeclarator([
               declarator(

@@ -58,7 +58,7 @@ top::Parameters ::=
 }
 
 aspect production parameterDecl
-top::ParameterDecl ::= storage::[StorageClass] bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
+top::ParameterDecl ::= storage::StorageClasses bty::BaseTypeExpr mty::TypeModifierExpr name::MaybeName attrs::Attributes
 {
   local n :: Name =
     case name.maybename of
@@ -112,8 +112,20 @@ top::Decl ::= d::[Def]
   top.cilkFrameDeclsScopes = [];
 }
 
+aspect production injectGlobalDeclsDecl
+top::Decl ::= decls::Decls
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
+aspect production injectFunctionDeclsDecl
+top::Decl ::= decls::Decls
+{
+  top.cilkFrameDeclsScopes = [];
+}
+
 aspect production variableDecls
-top::Decl ::= storage::[StorageClass]  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
+top::Decl ::= storage::StorageClasses  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
 {
   top.cilkFrameDeclsScopes = [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
 }
@@ -140,6 +152,19 @@ aspect production warnDecl
 top::Decl ::= msg::[Message]
 {
   top.cilkFrameDeclsScopes = [];
+}
+
+aspect production decDecl
+top::Decl ::= d::Decorated Decl
+{
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
+}
+
+aspect production deferredDecl
+top::Decl ::= refId::String  d::Decl
+{
+  -- TODO: Not sure if this is right, good enough for now?
+  top.cilkFrameDeclsScopes = d.cilkFrameDeclsScopes;
 }
 
 aspect production staticAssertDecl

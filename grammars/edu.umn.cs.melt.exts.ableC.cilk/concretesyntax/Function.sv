@@ -2,7 +2,6 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:concretesyntax;
 
 -- Import host language components
 import edu:umn:cs:melt:ableC:concretesyntax;
-import edu:umn:cs:melt:ableC:concretesyntax:lexerHack as lh;
 import edu:umn:cs:melt:ableC:abstractsyntax:host as abs;
 import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 
@@ -24,7 +23,7 @@ concrete productions top::CilkFunctionDefinition_c
     d.givenStmt = s.ast;
   }
   action {
-    context = lh:closeScope(context); -- Opened by InitialFunctionDefinition.
+    context = closeScope(context); -- Opened by InitialFunctionDefinition.
   }
 | ds::DeclarationSpecifiers_c d::Declarator_c ';'
   {
@@ -38,7 +37,7 @@ concrete productions top::CilkFunctionDefinition_c
 
     top.ast =
       cilkFunctionProto(
-        ds.storageClass, specialSpecifiers, bt, d.ast,
+        abs:foldStorageClass(ds.storageClass), specialSpecifiers, bt, d.ast,
         d.declaredIdent, ds.attributes
       );
   }
@@ -76,12 +75,12 @@ concrete productions top::CilkInitialFunctionDefinition_c
         end;
 
       top.ast =
-        cilkFunctionDecl(ds.storageClass, specialSpecifiers, bt, mt, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(abs:foldStorageClass(ds.storageClass), specialSpecifiers, bt, mt, d.declaredIdent, ds.attributes, abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Function are annoying because we have to open a scope, then add the
       -- parameters, and close it after the brace.
-      context = lh:beginFunctionScope(d.declaredIdent, d.declaredParamIdents, context);
+      context = beginFunctionScope(d.declaredIdent, Identifier_t, d.declaredParamIdents, Identifier_t, context);
     }
 | d::Declarator_c  l::InitiallyUnqualifiedDeclarationList_c
     {
@@ -110,12 +109,12 @@ concrete productions top::CilkInitialFunctionDefinition_c
         end;
 
       top.ast =
-        cilkFunctionDecl([], abs:nilSpecialSpecifier(), bt, mt, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
+        cilkFunctionDecl(abs:nilStorageClass(), abs:nilSpecialSpecifier(), bt, mt, d.declaredIdent, abs:nilAttribute(), abs:foldDecl(l.ast), top.givenStmt);
     }
     action {
       -- Unfortunate duplication. This production is necessary for K&R compatibility
       -- We can't make it a proper optional nonterminal, since that requires a reduce far too early.
       -- (i.e. LALR conflicts)
-      context = lh:beginFunctionScope(d.declaredIdent, d.declaredParamIdents, context);
+      context = beginFunctionScope(d.declaredIdent, Identifier_t, d.declaredParamIdents, Identifier_t, context);
     }
 
