@@ -31,7 +31,7 @@ XC_INCLUDE_DIRS=$(wildcard $(EXTS_BASE)/*/include)
 # All header files that may be included, to be included as dependencies
 XC_INCLUDE_SOURCES=$(foreach dir,$(XC_INCLUDE_DIRS),$(wildcard $(dir)/*.*h))
 # Flags passed to ableC including the appropriate directories
-override XCFLAGS+=$(addprefix -I,$(XC_INCLUDE_DIRS)) -I/usr/local/include/cilk 
+override XCFLAGS+=$(addprefix -I,$(XC_INCLUDE_DIRS)) -I/usr/local/include/cilk
 # Flags passed to Java when invoking ableC
 override JAVAFLAGS+=-Xss6M
 

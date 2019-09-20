@@ -43,6 +43,8 @@ cilk void func(int n) {
 %parallel edu:umn:cs:melt:exts:ableC:cilk=0.5
 
 int main(int argc,  char **argv) {
+  %parallelize
+
   x = 5;
 
   int res;

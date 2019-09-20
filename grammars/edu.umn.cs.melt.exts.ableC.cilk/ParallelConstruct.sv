@@ -1,12 +1,12 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk;
 
-import edu:umn:cs:melt:ableC:parallel;
+import edu:umn:cs:melt:exts:ableC:parallel;
 import edu:umn:cs:melt:ableC:abstractsyntax:construction;
 import edu:umn:cs:melt:ableC:abstractsyntax:env;
 import edu:umn:cs:melt:ableC:abstractsyntax:host;
 
 aspect production parallelism
-top::ParallelConstruct ::= env::Decorated Env
+top::ParallelConstruct ::= env::Decorated Env nproc::Expr
 {
   local cilkLoc :: Location = builtinLoc("cilk");
 
