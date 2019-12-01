@@ -4,6 +4,8 @@ ABLEC_BASE?=../../../ableC
 # Path from current directory to top level extensions directory
 EXTS_BASE?=../../../extensions
 
+# The Silver compiler to use
+SILVER=silver-ableC
 # The jar file to built
 ABLEC_JAR=ableC.jar
 # The artifact specification grammar to compile
@@ -61,7 +63,7 @@ $(LIBS):
 
 $(ABLEC_JAR): $(GRAMMAR_SOURCES)
 	touch $(wildcard $(ARTIFACT)/*.sv)
-	silver -o $@ $(SVFLAGS) $(ARTIFACT)
+	$(SILVER) -o $@ $(SVFLAGS) $(ARTIFACT)
 
 %.c: %.xc $(XC_INCLUDE_SOURCES) $(ABLEC_JAR)
 	java $(JAVAFLAGS) -jar $(ABLEC_JAR) $< $(XCFLAGS)

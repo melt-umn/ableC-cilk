@@ -2,6 +2,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
 imports edu:umn:cs:melt:ableC:abstractsyntax:host;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction;
+imports edu:umn:cs:melt:ableC:abstractsyntax:overloadable as ovrld;
 imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 
 aspect production functionDeclaration
