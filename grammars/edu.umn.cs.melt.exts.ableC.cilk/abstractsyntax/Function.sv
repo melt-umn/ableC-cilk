@@ -23,7 +23,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty.givenRefId = nothing();
 
   mty.baseType = bty.typerep;
-  mty.typeModifiersIn = bty.typeModifiers;
+  mty.typeModifierIn = bty.typeModifier;
 
   top.pp = ppConcat([
       terminate(space(), storage.pps),
@@ -140,7 +140,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
 
   bty.givenRefId = nothing();
   mty.baseType = bty.typerep;
-  mty.typeModifiersIn = bty.typeModifiers;
+  mty.typeModifierIn = bty.typeModifier;
 
   local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtinLoc(MODULE_NAME));
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
