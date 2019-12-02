@@ -63,7 +63,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
       -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
       local baseMT  :: abs:TypeModifierExpr = d.ast;
       baseMT.abs:baseType = abs:errorType();
-      baseMT.abs:typeModifiersIn = [];
+      baseMT.abs:typeModifierIn = abs:baseTypeExpr();
       baseMT.abs:returnType = nothing();
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
@@ -97,7 +97,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
       -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
       local baseMT  :: abs:TypeModifierExpr = d.ast;
       baseMT.abs:baseType = abs:errorType();
-      baseMT.abs:typeModifiersIn = [];
+      baseMT.abs:typeModifierIn = abs:baseTypeExpr();
       baseMT.abs:returnType = nothing();
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
