@@ -2,5 +2,5 @@
 
 library "github.com/melt-umn/jenkins-lib"
 
-ablec.buildNormalExtension('ableC-cilk')
+ablec.buildSilverAbleCExtension('ableC-cilk')
 
