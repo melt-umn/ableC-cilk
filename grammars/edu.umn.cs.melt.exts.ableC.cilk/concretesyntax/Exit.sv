@@ -10,7 +10,7 @@ import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 import silver:langutil;
 import edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
-marking terminal CilkExit_t 'cilk_exit' lexer classes {Ckeyword};
+marking terminal CilkExit_t 'cilk_exit' lexer classes {Keyword, Global};
 
 {- Cilk_exit in the MIT Cilk implementation is a macro generating
    a do-while construct.  Thus it is a statement, specifically an
