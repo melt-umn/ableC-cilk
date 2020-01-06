@@ -10,7 +10,7 @@ import edu:umn:cs:melt:ableC:abstractsyntax:construction as abs;
 import silver:langutil;
 import edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
-marking terminal CilkSync_t 'sync' lexer classes {Ckeyword};
+marking terminal CilkSync_t 'sync' lexer classes {Keyword, Global};
 
 concrete production cilk_sync_c
 top::Stmt_c ::= 'sync' ';'
