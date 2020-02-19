@@ -45,7 +45,7 @@ s::Stmt ::= loc::Location
     foldStmt([
       exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=builtinLoc(MODULE_NAME))),
       ableC_Stmt { Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header)); },
-      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
+      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); },
       checkAndSyncNonCilk(loc)
     ]);
 }
