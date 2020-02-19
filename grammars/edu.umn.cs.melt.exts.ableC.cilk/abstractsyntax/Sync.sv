@@ -1,7 +1,5 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
-import edu:umn:cs:melt:ableC:abstractsyntax:construction:parsing;
-import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 
 {- based on cilkc2c/transform.c:TransformSync() -}
 abstract production cilk_syncStmt
@@ -46,8 +44,8 @@ s::Stmt ::= loc::Location
   forwards to
     foldStmt([
       exprStmt(comment("expand CILK2C_AT_SYNC_FAST() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);"),
+      ableC_Stmt { Cilk_cilk2c_at_sync_fast_cp(_cilk_ws, &(_cilk_frame->header)); },
+      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
       checkAndSyncNonCilk(loc)
     ]);
 }
@@ -80,7 +78,7 @@ s::Stmt ::= loc::Location
   local beforeSyncSlow :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_BEFORE_SYNC_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_before_sync_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   -- _cilk_frame->header.entry = syncCount;
@@ -97,7 +95,7 @@ s::Stmt ::= loc::Location
         location=builtinLoc(MODULE_NAME)
       ),
       foldStmt([
-        parseStmt("return;"),
+        ableC_Stmt { return; },
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;")
         -- TODO: replace txtStmt with labelStmt
 --        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)), nullStmt()),
@@ -109,15 +107,15 @@ s::Stmt ::= loc::Location
   local afterSyncSlow :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_AFTER_SYNC_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_after_sync_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
-      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      ableC_Stmt { Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header)); },
+      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
     ]);
 
   forwards to
