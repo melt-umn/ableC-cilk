@@ -179,6 +179,24 @@ top::Decl ::= s::String
   top.cilkFrameDeclsScopes = [];
 }
 
+aspect production autoDecl
+top::Decl ::= name::Name  e::Expr
+{
+  local scopeId::String =
+    if name.location.line >= 0
+    then toString(name.location.line)
+    else "gen";
+  top.defs <- [scopeIdDef(name.name, scopeId)];
+
+  top.cilkFrameDeclsScopes =
+    [pair(
+      scopeId,
+      structItem(
+        nilAttribute(),
+        directTypeExpr(e.typerep),
+        foldStructDeclarator([structField(name, baseTypeExpr(), nilAttribute())])))];
+}
+
 aspect production txtDecl
 top::Decl ::= txt::String
 {

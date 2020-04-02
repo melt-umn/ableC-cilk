@@ -4,6 +4,8 @@ ABLEC_BASE?=../../../ableC
 # Path from current directory to top level extensions directory
 EXTS_BASE?=../../../extensions
 
+# The Silver compiler to use
+SILVER=silver-ableC
 # The artifact specification grammars to compile
 MDA_ARTIFACT=determinism
 MWDA_ARTIFACT=well_definedness
@@ -20,12 +22,12 @@ mwda: mwda.test
 
 mda.test: $(GRAMMAR_SOURCES)
 	touch $(wildcard $(MDA_ARTIFACT)/*.sv)
-	silver --dont-translate $(SVFLAGS) $(MDA_ARTIFACT)
+	$(SILVER) --dont-translate $(SVFLAGS) $(MDA_ARTIFACT)
 	touch $@
 
 mwda.test: $(GRAMMAR_SOURCES)
 	touch $(wildcard $(MWDA_ARTIFACT)/*.sv)
-	silver --dont-translate $(SVFLAGS) --clean --warn-all --warn-error $(MWDA_ARTIFACT)
+	$(SILVER) --dont-translate $(SVFLAGS) --clean --warn-all --warn-error $(MWDA_ARTIFACT)
 	touch $@
 
 clean:

@@ -11,7 +11,7 @@ import silver:langutil;
 import edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
 
-marking terminal CilkSpawn_t 'spawn' lexer classes {Ckeyword};
+marking terminal CilkSpawn_t 'spawn' lexer classes {Keyword, Global};
 
 concrete production cilk_spawn_c
 top::Stmt_c ::= 'spawn' sb::SpawnBody

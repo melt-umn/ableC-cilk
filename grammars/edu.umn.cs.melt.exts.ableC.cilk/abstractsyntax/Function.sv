@@ -2,6 +2,7 @@ grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 
 imports edu:umn:cs:melt:ableC:abstractsyntax:host;
 imports edu:umn:cs:melt:ableC:abstractsyntax:construction;
+imports edu:umn:cs:melt:ableC:abstractsyntax:overloadable as ovrld;
 imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 
 aspect production functionDeclaration
@@ -23,7 +24,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   bty.givenRefId = nothing();
 
   mty.baseType = bty.typerep;
-  mty.typeModifiersIn = bty.typeModifiers;
+  mty.typeModifierIn = bty.typeModifier;
 
   top.pp = ppConcat([
       terminate(space(), storage.pps),
@@ -136,7 +137,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
 
   bty.givenRefId = nothing();
   mty.baseType = bty.typerep;
-  mty.typeModifiersIn = bty.typeModifiers;
+  mty.typeModifierIn = bty.typeModifier;
 
   local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtinLoc(MODULE_NAME));
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));

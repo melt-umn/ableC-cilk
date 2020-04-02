@@ -1,7 +1,5 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
 imports silver:util:raw:treemap as tm;
-import edu:umn:cs:melt:ableC:abstractsyntax:construction:parsing;
-import edu:umn:cs:melt:ableC:abstractsyntax:substitution;
 
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr f::Expr args::Exprs
@@ -165,20 +163,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
   local beforeSpawnFast :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header));"),
-      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      ableC_Stmt { Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header)); },
+      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
     ]);
 
   forwards to
@@ -241,12 +239,7 @@ s::Stmt ::= l::Expr callF::Expr
   local saveL :: Stmt =
     if   lIsGlobal
     then nullStmt()
-    else
-      substStmt(
-        [nameSubstitution("_scopeName_", scopeName),
-         nameSubstitution("_lName_", lName)],
-        parseStmt("_cilk_frame->_scopeName_._lName_ = _lName_;")
-      );
+    else ableC_Stmt { _cilk_frame->$Name{scopeName}.$Name{lName} = $Name{lName}; };
 
   local frameTypeExpr :: BaseTypeExpr =
     tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName);
@@ -329,20 +322,20 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   local beforeSpawnSlow :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header));")
+      ableC_Stmt { Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local recoveryStmt :: Stmt =
@@ -363,8 +356,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   local atThreadBoundary :: Stmt =
     foldStmt([
       exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=builtinLoc(MODULE_NAME))),
-      parseStmt("Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header));"),
-      parseStmt("Cilk_cilk2c_event_new_thread_maybe(_cilk_ws);")
+      ableC_Stmt { Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header)); },
+      ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
     ]);
 
   forwards to
@@ -493,9 +486,9 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | justExpr(_)   ->
 --        if isSlow || returnsVoid
         if isSlow
-        then parseStmt("return;")
-        else parseStmt("return 0;")
-    | nothingExpr() -> parseStmt("return;")
+        then ableC_Stmt { return; }
+        else ableC_Stmt { return 0; }
+    | nothingExpr() -> ableC_Stmt { return; }
     end;
 
   local ifExceptionHandler :: Stmt =
@@ -510,7 +503,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
         location=builtinLoc(MODULE_NAME)
       ),
       foldStmt([
-        parseStmt("Cilk_cilk2c_pop(_cilk_ws);"),
+        ableC_Stmt { Cilk_cilk2c_pop(_cilk_ws); },
         retStmt
       ])
     );
