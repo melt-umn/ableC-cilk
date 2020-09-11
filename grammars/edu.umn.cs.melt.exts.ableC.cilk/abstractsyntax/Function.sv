@@ -971,16 +971,7 @@ abstract production transformFastClone
 top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
-  top.functionDefs := body.functionDefs;
-
-  body.env =
-        addEnv(
-          [
-            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
-            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
-          ],
-          top.env
-        );
+  top.functionDefs := fastClone.functionDefs;
 
 
   local fastClone :: Stmt =
@@ -989,7 +980,15 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       body
     ]);
 
-  fastClone.returnType = body.returnType;
+  fastClone.returnType = top.returnType;
+  fastClone.env =
+        addEnv(
+          [
+            miscDef(cilk_in_fast_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+          ],
+          top.env
+        );
 
   -- get all name/scopeIds pairs except those at global scope
   local cilkFrameVars :: [Pair<String String>] =
@@ -998,7 +997,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   local fwd :: Stmt =
     if   frameContainsShadow(cilkFrameVars)
     then warnStmt([err(builtinLoc(MODULE_NAME), "shadowing variable names in cilk functions is currently not supported")])
-    else fastClone;
+    else decStmt(fastClone);
 
   forwards to
     seqStmt(
@@ -1171,9 +1170,21 @@ top::Stmt ::= body::Stmt args::Parameters
 
   top.functionDefs := body.functionDefs;
 
+  body.returnType = top.returnType;
+  body.env =
+        addEnv(
+          argDecls.defs ++
+          [
+            miscDef(cilk_in_slow_clone_id, emptyMiscItem()),
+            syncLocationsDef(cilk_sync_locations_id, top.syncLocations)
+          ],
+          top.env
+        );
+
   args.position = 0;
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
+  argDecls.returnType = top.returnType;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
@@ -1251,7 +1262,7 @@ top::Stmt ::= body::Stmt args::Parameters
       startThreadSlow,
       switchHeaderEntry,
       restoreVariables(args.env),
-      body
+      decStmt(body)
     ]);
 }
 
