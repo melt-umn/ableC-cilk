@@ -44,7 +44,7 @@ override CFLAGS+= -I/usr/local/include/cilk -D__REENTRANT -Wl,-rpath,/usr/local/
 #LIB_DIRS=$(wildcard $(EXTS_BASE)/*/lib)
 LIB_DIRS=/usr/local/lib /usr/local/lib/cilk
 # Flags passed to the linker specifying the appropriate directories
-override LDFLAGS+=$(addprefix -L,$(LIB_DIRS))
+override LDFLAGS+=$(addprefix -L,$(LIB_DIRS)) -no-pie
 # Flags passed to the linker specifying libraries to link
 LDLIBS=-lcilkrt0 -lcilk -pthread -lm
 
