@@ -84,7 +84,7 @@ runtime_error/%.test: runtime_error/%.out
 	touch $@
 
 %.test: %.out
-	./$< -nproc 12
+	export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/cilk:$LD_LIBRARY_PATH; ./$< -nproc 12
 	touch $@
 
 clean:

@@ -73,7 +73,7 @@ $(ABLEC_JAR): $(GRAMMAR_SOURCES)
 
 %.test: %.out
 	@echo "Running $<..."
-	@./$< || echo "(exit $$?)"
+	@export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/cilk:$LD_LIBRARY_PATH; ./$< || echo "(exit $$?)"
 	touch $@
 
 clean:
