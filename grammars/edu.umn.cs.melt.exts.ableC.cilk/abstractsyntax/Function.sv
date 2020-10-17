@@ -778,7 +778,8 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
           location=builtinLoc(MODULE_NAME)
         ),
         location=builtinLoc(MODULE_NAME)
-      )
+      ),
+      location=builtinLoc(MODULE_NAME)
     );
 
   -- Cilk_free(_cilk_procargs);
@@ -821,7 +822,8 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
         true,
         resultName,
         location=builtinLoc(MODULE_NAME)
-      )
+      ),
+      location=builtinLoc(MODULE_NAME)
     );
 
   local sizeofRet :: Expr =
@@ -1057,7 +1059,8 @@ Stmt ::= newName::Name
           declRefExpr(sigName, location=builtinLoc(MODULE_NAME))
         ]),
         location=builtinLoc(MODULE_NAME)
-      )
+      ),
+      location=builtinLoc(MODULE_NAME)
     );
 
   -- expand CILK2C_START_THREAD_FAST() macro
@@ -1327,17 +1330,19 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
           positionalInit(
             objectInitializer(
               foldInit([
-                positionalInit(exprInitializer(sizeofRet)),
-                positionalInit(exprInitializer(sizeofFrame)),
-                positionalInit(exprInitializer(slowClone)),
-                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
-              ])
+                positionalInit(exprInitializer(sizeofRet, location=builtinLoc(MODULE_NAME))),
+                positionalInit(exprInitializer(sizeofFrame, location=builtinLoc(MODULE_NAME))),
+                positionalInit(exprInitializer(slowClone, location=builtinLoc(MODULE_NAME))),
+                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
+              ]),
+              location=builtinLoc(MODULE_NAME)
             )
           ),
           reverse(bodyLinkage)
         )
-      )
+      ),
+      location=builtinLoc(MODULE_NAME)
     );
 
   return

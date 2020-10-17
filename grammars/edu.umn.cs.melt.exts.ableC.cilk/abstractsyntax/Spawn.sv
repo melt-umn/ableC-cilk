@@ -129,12 +129,13 @@ s::Stmt ::= f::Expr args::Exprs
          cons(
            positionalInit(objectInitializer(
              foldInit([
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
-             ])
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
+             ]),
+             location=builtinLoc(MODULE_NAME)
            )),
            s.cilkLinksInh
          )
@@ -208,12 +209,13 @@ s::Stmt ::= l::Expr callF::Expr
          cons(
            positionalInit(objectInitializer(
              foldInit([
-               positionalInit(exprInitializer(sizeofL)),
-               positionalInit(exprInitializer(frameOffset)),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME))))
-             ])
+               positionalInit(exprInitializer(sizeofL, location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(frameOffset, location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
+               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
+             ]),
+             location=builtinLoc(MODULE_NAME)
            )),
            s.cilkLinksInh
          );
