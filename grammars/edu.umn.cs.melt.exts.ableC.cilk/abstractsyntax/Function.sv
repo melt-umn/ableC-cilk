@@ -296,7 +296,7 @@ StructItem ::= cilkFrameDecl::Pair<String [StructItem]>
         nilQualifier(),
         structDecl(
           nilAttribute(),
-          nothingName(),
+          justName(name("_cilk_frame_" ++ toString(genInt()), location=builtinLoc(MODULE_NAME))),
           foldStructItem(snd(cilkFrameDecl)),
           location=builtinLoc(MODULE_NAME)
         )
@@ -353,7 +353,7 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
                   nilQualifier(),
                   structDecl(
                     nilAttribute(),
-                    nothingName(),
+                    justName(name("_cilk_frame_" ++ toString(genInt()), location=builtinLoc(MODULE_NAME))),
 --                    nilStructItem(),
                     foldStructItem(head(cilkFrameDeclsScopes)),
                     location=builtinLoc(MODULE_NAME)
