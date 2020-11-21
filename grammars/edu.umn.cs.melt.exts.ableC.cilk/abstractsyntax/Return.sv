@@ -121,7 +121,7 @@ r::Stmt ::= e::MaybeExpr
                       name("_cilk_tmp", location=builtinLoc(MODULE_NAME)),
                       returnType.typeModifierExpr,
                       nilAttribute(),
-                      justInitializer(exprInitializer(e))
+                      justInitializer(exprInitializer(e, location=builtinLoc(MODULE_NAME)))
                     )
                   ])
                 )
@@ -172,7 +172,7 @@ r::Stmt ::= me::MaybeExpr
             tmpName,
             baseTypeExpr(),
             nilAttribute(),
-            justInitializer(exprInitializer(e))
+            justInitializer(exprInitializer(e, location=builtinLoc(MODULE_NAME)))
           )
         ])
       )

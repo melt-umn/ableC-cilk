@@ -43,7 +43,7 @@ override CFLAGS+=-O2
 # All directories contining extension libraries that may be linked
 LIB_DIRS=$(wildcard $(EXTS_BASE)/*/lib)
 # Flags passed to the linker specifying the appropriate directories
-override LDFLAGS+=$(addprefix -L,$(LIB_DIRS)) -L/usr/local/lib -L/usr/local/lib/cilk
+override LDFLAGS+=$(addprefix -L,$(LIB_DIRS)) -L/usr/local/lib -L/usr/local/lib/cilk -no-pie
 # Flags passed to the linker specifying libraries to link
 LDLIBS=-lcilkrt0 -lcilk -Wl,-rpath,/usr/local/lib -pthread -lm
 
@@ -73,7 +73,7 @@ $(ABLEC_JAR): $(GRAMMAR_SOURCES)
 
 %.test: %.out
 	@echo "Running $<..."
-	@./$< || echo "(exit $$?)"
+	@export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/cilk:$LD_LIBRARY_PATH; ./$< || echo "(exit $$?)"
 	touch $@
 
 clean:
