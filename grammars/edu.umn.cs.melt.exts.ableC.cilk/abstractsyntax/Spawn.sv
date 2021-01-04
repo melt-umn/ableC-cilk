@@ -1,5 +1,5 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
-imports silver:util:raw:treemap as tm;
+imports silver:util:treemap as tm;
 
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr f::Expr args::Exprs
