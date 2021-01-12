@@ -1110,7 +1110,7 @@ Boolean ::= cilkFrameVars::[Pair<String String>]
   return
     if   null(cilkFrameVars)
     then false
-    else containsBy(pairFstStringEq, head(cilkFrameVars), tail(cilkFrameVars))
+    else contains(head(cilkFrameVars), tail(cilkFrameVars))
            || frameContainsShadow(tail(cilkFrameVars));
 }
 
