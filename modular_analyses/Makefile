@@ -27,7 +27,7 @@ mda.test: $(GRAMMAR_SOURCES)
 
 mwda.test: $(GRAMMAR_SOURCES)
 	touch $(wildcard $(MWDA_ARTIFACT)/*.sv)
-	$(SILVER) --dont-translate $(SVFLAGS) --clean --warn-all --warn-error $(MWDA_ARTIFACT)
+	$(SILVER) --dont-translate $(SVFLAGS) --clean --mwda $(MWDA_ARTIFACT)
 	touch $@
 
 clean:
