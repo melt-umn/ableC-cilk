@@ -197,10 +197,7 @@ s::Stmt ::= l::Expr callF::Expr
   s.functionDefs := [];
 
   local lIsGlobal :: Boolean =
-    !containsBy(
-      stringEq, lName.name,
-      map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds))))
-     );
+    !contains(lName.name, map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds)))));
 
   s.cilkLinks =
     if   lIsGlobal
@@ -552,12 +549,6 @@ Stmt ::= syncCount::Integer
     );
 }
 
-function locationEq
-Boolean ::= l1::Location l2::Location
-{
-  return l1.filename == l2.filename && l1.line == l2.line && l1.column == l2.column;
-}
-
 function lookupSyncCount
 Integer ::= loc::Location  env::Decorated Env
 {
@@ -567,6 +558,6 @@ Integer ::= loc::Location  env::Decorated Env
     then error("syncLocations not passed down through environment")
     else head(foundSyncLocations);
 
-  return positionOf(locationEq, loc, allSyncLocations) + 1;
+  return positionOf(loc, allSyncLocations) + 1;
 }
 
