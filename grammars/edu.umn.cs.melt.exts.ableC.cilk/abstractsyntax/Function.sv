@@ -37,6 +37,8 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
 
   fnquals.env = top.env;
   fnquals.returnType = top.returnType;
+  fnquals.breakValid = top.breakValid;
+  fnquals.continueValid = top.continueValid;
 
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
@@ -98,6 +100,8 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   slowCloneBody.env = top.env;
   slowCloneBody.cilkLinksInh = [];
   slowCloneBody.returnType = nothing();
+  slowCloneBody.breakValid = false;
+  slowCloneBody.continueValid = false;
   slowCloneBody.cilkProcName = newName;
 
 ---- Proc Info --------------------------------------------------
@@ -983,6 +987,8 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
     ]);
 
   fastClone.returnType = top.returnType;
+  fastClone.breakValid = top.breakValid;
+  fastClone.continueValid = top.continueValid;
   fastClone.env =
         addEnv(
           [
@@ -1174,6 +1180,8 @@ top::Stmt ::= body::Stmt args::Parameters
   top.functionDefs := body.functionDefs;
 
   body.returnType = top.returnType;
+  body.breakValid = top.breakValid;
+  body.continueValid = top.continueValid;
   body.env =
         addEnv(
           argDecls.defs ++
@@ -1188,6 +1196,8 @@ top::Stmt ::= body::Stmt args::Parameters
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
   argDecls.returnType = top.returnType;
+  argDecls.breakValid = top.breakValid;
+  argDecls.continueValid = top.continueValid;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =

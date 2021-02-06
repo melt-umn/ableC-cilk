@@ -58,6 +58,8 @@ top::Stmt ::= s::Decorated Stmt
     decorate new(s) with {
       env = top.env;
       returnType = top.returnType;
+      breakValid = top.breakValid;
+      continueValid = top.continueValid;
       cilkLinksInh = top.cilkLinksInh;
       cilkProcName = top.cilkProcName;
     }.cilkLinks;

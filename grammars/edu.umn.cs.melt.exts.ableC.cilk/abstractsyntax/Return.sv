@@ -159,6 +159,8 @@ r::Stmt ::= me::MaybeExpr
     end;
   e.env = r.env;
   e.returnType = r.returnType;
+  e.breakValid = r.breakValid;
+  e.continueValid = r.continueValid;
 
   -- TODO: handle return void
   local tmpNameStr :: String = "__tmp" ++ toString(genInt());

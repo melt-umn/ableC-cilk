@@ -65,6 +65,8 @@ concrete productions top::CilkInitialFunctionDefinition_c
       baseMT.abs:baseType = abs:errorType();
       baseMT.abs:typeModifierIn = abs:baseTypeExpr();
       baseMT.abs:returnType = nothing();
+      baseMT.abs:breakValid = false;
+      baseMT.abs:continueValid = false;
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
         | false, abs:functionTypeExprWithArgs(t, p, v, q) ->
@@ -99,6 +101,8 @@ concrete productions top::CilkInitialFunctionDefinition_c
       baseMT.abs:baseType = abs:errorType();
       baseMT.abs:typeModifierIn = abs:baseTypeExpr();
       baseMT.abs:returnType = nothing();
+      baseMT.abs:breakValid = false;
+      baseMT.abs:continueValid = false;
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
         | false, abs:functionTypeExprWithArgs(t, p, v, q) ->

@@ -413,6 +413,8 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     end;
   l.env = top.env;
   l.returnType = top.returnType;
+  l.breakValid = top.breakValid;
+  l.continueValid = top.continueValid;
 
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
