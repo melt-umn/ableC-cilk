@@ -52,6 +52,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         case baseMT of
         | abs:functionTypeExprWithArgs(t, p, v, q) -> q
         | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        | _ -> abs:nilQualifier()
         end;
 
       local specialSpecifiers :: abs:SpecialSpecifiers =
@@ -91,6 +92,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         case baseMT of
         | abs:functionTypeExprWithArgs(t, p, v, q) -> q
         | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        | _ -> abs:nilQualifier()
         end;
       
       local bt :: abs:BaseTypeExpr =
