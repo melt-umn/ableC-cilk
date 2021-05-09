@@ -98,7 +98,7 @@ r::Stmt ::= e::MaybeExpr
     ]);
 
   local returnType :: Type =
-    case r.returnType of
+    case r.controlStmtContext.returnType of
     | just(ty)  -> ty
     | nothing() -> error("returnType is required by cilk return")
     end;
@@ -158,9 +158,7 @@ r::Stmt ::= me::MaybeExpr
     | nothingExpr() -> error("internal error in cilk_slowCloneReturn, attempting to extract from nothingExpr()")
     end;
   e.env = r.env;
-  e.returnType = r.returnType;
-  e.breakValid = r.breakValid;
-  e.continueValid = r.continueValid;
+  e.controlStmtContext = r.controlStmtContext;
 
   -- TODO: handle return void
   local tmpNameStr :: String = "__tmp" ++ toString(genInt());

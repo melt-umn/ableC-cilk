@@ -412,9 +412,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | nothingExpr() -> error("internal error, attempting to extract from nothingExpr()")
     end;
   l.env = top.env;
-  l.returnType = top.returnType;
-  l.breakValid = top.breakValid;
-  l.continueValid = top.continueValid;
+  l.controlStmtContext = top.controlStmtContext;
 
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =

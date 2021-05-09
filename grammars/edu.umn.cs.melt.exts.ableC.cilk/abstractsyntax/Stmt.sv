@@ -57,9 +57,7 @@ top::Stmt ::= s::Decorated Stmt
     -- to replace these dec* productions would be nice to have instead.
     decorate new(s) with {
       env = top.env;
-      returnType = top.returnType;
-      breakValid = top.breakValid;
-      continueValid = top.continueValid;
+      controlStmtContext = top.controlStmtContext;  
       cilkLinksInh = top.cilkLinksInh;
       cilkProcName = top.cilkProcName;
     }.cilkLinks;
