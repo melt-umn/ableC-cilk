@@ -10,6 +10,7 @@ r::Stmt ::= e::MaybeExpr
   r.globalDecls := e.globalDecls;
   r.defs := e.defs;
   r.functionDefs := [];
+  r.labelDefs := [];
 
   r.cilkFrameDeclsScopes = [];
 
@@ -41,6 +42,7 @@ r::Stmt ::= e::MaybeExpr
 
   r.pp = pp"cilk return ${e.pp}";
   r.functionDefs := [];
+  r.labelDefs := [];
 
   -- TODO: check if needs_sync? (see cilk2c/transform.c:TransformReturn())
 
@@ -151,6 +153,7 @@ r::Stmt ::= me::MaybeExpr
 {
   r.pp = ppConcat([text("cilk return"), space(), me.pp, semi()]);
   r.functionDefs := [];
+  r.labelDefs := [];
 
   local e :: Expr =
     case me of

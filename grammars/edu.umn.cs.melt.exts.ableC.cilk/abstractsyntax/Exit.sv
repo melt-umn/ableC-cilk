@@ -4,6 +4,7 @@ abstract production cilk_exitStmt
 s::Stmt ::= me::MaybeExpr
 {
   s.functionDefs := [];
+  s.labelDefs := [];
 
   local retval :: Exprs =
     case me.justTheExpr of

@@ -8,6 +8,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   s.functionDefs := [];
+  s.labelDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -81,6 +82,7 @@ s::Stmt ::= f::Expr args::Exprs
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   s.functionDefs := [];
+  s.labelDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -195,6 +197,7 @@ s::Stmt ::= l::Expr callF::Expr
 {
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
   s.functionDefs := [];
+  s.labelDefs := [];
 
   local lIsGlobal :: Boolean =
     !contains(lName.name, map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds)))));
@@ -311,6 +314,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
   s.functionDefs := [];
+  s.labelDefs := [];
 
   -- reserve a sync number
   s.syncLocations = [loc];
@@ -405,6 +409,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
   top.functionDefs := [];
+  top.labelDefs := [];
 
   local l :: Expr =
     case ml of

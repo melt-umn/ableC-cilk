@@ -974,6 +974,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
   top.functionDefs := fastClone.functionDefs;
+  top.labelDefs := fastClone.labelDefs;
 
 
   local fastClone :: Stmt =
@@ -1172,6 +1173,7 @@ top::Stmt ::= body::Stmt args::Parameters
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
   top.functionDefs := body.functionDefs;
+  top.labelDefs := body.labelDefs;
 
   body.controlStmtContext = top.controlStmtContext;
   body.env =
