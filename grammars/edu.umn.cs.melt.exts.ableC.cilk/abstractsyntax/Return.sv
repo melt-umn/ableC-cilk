@@ -38,7 +38,7 @@ r::Stmt ::= e::MaybeExpr
 abstract production cilk_fastCloneReturn
 r::Stmt ::= e::MaybeExpr
 {
-  local tempInt::Integer = genInt();
+  local tempInt::Integer = genIntT();
 
   r.pp = pp"cilk return ${e.pp}";
   r.functionDefs := [];
@@ -164,7 +164,7 @@ r::Stmt ::= me::MaybeExpr
   e.controlStmtContext = r.controlStmtContext;
 
   -- TODO: handle return void
-  local tmpNameStr :: String = "__tmp" ++ toString(genInt());
+  local tmpNameStr :: String = "__tmp" ++ toString(genIntT());
   local tmpName :: Name = name(tmpNameStr, location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(

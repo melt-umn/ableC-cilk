@@ -419,7 +419,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   l.env = top.env;
   l.controlStmtContext = top.controlStmtContext;
 
-  local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
+  local tmpName :: Name = name("__tmp" ++ toString(genIntT()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls(nilStorageClass(), nilAttribute(),
