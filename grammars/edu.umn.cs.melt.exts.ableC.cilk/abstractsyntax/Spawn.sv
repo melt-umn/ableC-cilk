@@ -1,5 +1,5 @@
 grammar edu:umn:cs:melt:exts:ableC:cilk:abstractsyntax;
-imports silver:util:raw:treemap as tm;
+imports silver:util:treemap as tm;
 
 abstract production cilkSpawnStmt
 s::Stmt ::= l::Expr f::Expr args::Exprs
@@ -8,6 +8,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   s.functionDefs := [];
+  s.labelDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -81,6 +82,7 @@ s::Stmt ::= f::Expr args::Exprs
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
   s.functionDefs := [];
+  s.labelDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -195,12 +197,10 @@ s::Stmt ::= l::Expr callF::Expr
 {
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
   s.functionDefs := [];
+  s.labelDefs := [];
 
   local lIsGlobal :: Boolean =
-    !containsBy(
-      stringEq, lName.name,
-      map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds))))
-     );
+    !contains(lName.name, map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds)))));
 
   s.cilkLinks =
     if   lIsGlobal
@@ -314,6 +314,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
 {
   s.pp = ppConcat([ text("spawn"), space(), call.pp ]);
   s.functionDefs := [];
+  s.labelDefs := [];
 
   -- reserve a sync number
   s.syncLocations = [loc];
@@ -408,6 +409,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 {
   top.pp = text("cilkMakeXPopFrame()"); -- TODO: better pp
   top.functionDefs := [];
+  top.labelDefs := [];
 
   local l :: Expr =
     case ml of
@@ -415,7 +417,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | nothingExpr() -> error("internal error, attempting to extract from nothingExpr()")
     end;
   l.env = top.env;
-  l.returnType = top.returnType;
+  l.controlStmtContext = top.controlStmtContext;
 
   local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
   local tmpDecl :: Stmt =
@@ -552,12 +554,6 @@ Stmt ::= syncCount::Integer
     );
 }
 
-function locationEq
-Boolean ::= l1::Location l2::Location
-{
-  return l1.filename == l2.filename && l1.line == l2.line && l1.column == l2.column;
-}
-
 function lookupSyncCount
 Integer ::= loc::Location  env::Decorated Env
 {
@@ -567,6 +563,6 @@ Integer ::= loc::Location  env::Decorated Env
     then error("syncLocations not passed down through environment")
     else head(foundSyncLocations);
 
-  return positionOf(locationEq, loc, allSyncLocations) + 1;
+  return positionOf(loc, allSyncLocations) + 1;
 }
 

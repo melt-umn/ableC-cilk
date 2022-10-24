@@ -13,6 +13,7 @@ s::Stmt ::= loc::Location
   s.defs := [];
   s.freeVariables := [];
   s.functionDefs := [];
+  s.labelDefs := [];
 
   s.cilkFrameDeclsScopes = [];
 
@@ -54,6 +55,7 @@ s::Stmt ::= loc::Location
 {
   s.pp = text("sync");
   s.functionDefs := [];
+  s.labelDefs := [];
   -- reserve a sync number
   s.syncLocations = [loc];
 

@@ -36,7 +36,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
     ]);
 
   fnquals.env = top.env;
-  fnquals.returnType = top.returnType;
+  fnquals.controlStmtContext = top.controlStmtContext;
 
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
@@ -97,7 +97,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
 
   slowCloneBody.env = top.env;
   slowCloneBody.cilkLinksInh = [];
-  slowCloneBody.returnType = nothing();
+  slowCloneBody.controlStmtContext = initialControlStmtContext;
   slowCloneBody.cilkProcName = newName;
 
 ---- Proc Info --------------------------------------------------
@@ -974,6 +974,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 {
   top.pp = text("cilkTransformFastClone()"); -- TODO: better pp
   top.functionDefs := fastClone.functionDefs;
+  top.labelDefs := fastClone.labelDefs;
 
 
   local fastClone :: Stmt =
@@ -982,7 +983,7 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
       body
     ]);
 
-  fastClone.returnType = top.returnType;
+  fastClone.controlStmtContext = top.controlStmtContext;
   fastClone.env =
         addEnv(
           [
@@ -1110,7 +1111,7 @@ Boolean ::= cilkFrameVars::[Pair<String String>]
   return
     if   null(cilkFrameVars)
     then false
-    else containsBy(pairFstStringEq, head(cilkFrameVars), tail(cilkFrameVars))
+    else contains(head(cilkFrameVars), tail(cilkFrameVars))
            || frameContainsShadow(tail(cilkFrameVars));
 }
 
@@ -1172,8 +1173,9 @@ top::Stmt ::= body::Stmt args::Parameters
   top.pp = text("cilkTransformSlowClone()"); -- TODO: better pp
 
   top.functionDefs := body.functionDefs;
+  top.labelDefs := body.labelDefs;
 
-  body.returnType = top.returnType;
+  body.controlStmtContext = top.controlStmtContext;
   body.env =
         addEnv(
           argDecls.defs ++
@@ -1187,7 +1189,7 @@ top::Stmt ::= body::Stmt args::Parameters
   args.position = 0;
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
-  argDecls.returnType = top.returnType;
+  argDecls.controlStmtContext = top.controlStmtContext;
 
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =

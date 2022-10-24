@@ -10,8 +10,8 @@ synthesized attribute envSyncLocationsContribs :: Contribs<[Location]> occurs on
 aspect production emptyEnv_i
 top::Env ::=
 {
-  top.scopeIds = [tm:empty(compareString)];
-  top.envSyncLocations = [tm:empty(compareString)];
+  top.scopeIds = [tm:empty()];
+  top.envSyncLocations = [tm:empty()];
 }
 
 aspect production addEnv_i
@@ -24,8 +24,8 @@ top::Env ::= d::Defs  e::Decorated Env
 aspect production openScopeEnv_i
 top::Env ::= e::Decorated Env
 {
-  top.scopeIds = tm:empty(compareString) :: e.scopeIds;
-  top.envSyncLocations = tm:empty(compareString) :: e.envSyncLocations;
+  top.scopeIds = tm:empty() :: e.scopeIds;
+  top.envSyncLocations = tm:empty() :: e.envSyncLocations;
 }
 
 aspect production globalEnv_i

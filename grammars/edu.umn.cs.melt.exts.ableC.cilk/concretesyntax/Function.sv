@@ -52,6 +52,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         case baseMT of
         | abs:functionTypeExprWithArgs(t, p, v, q) -> q
         | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        | _ -> abs:nilQualifier()
         end;
 
       local specialSpecifiers :: abs:SpecialSpecifiers =
@@ -64,7 +65,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
       local baseMT  :: abs:TypeModifierExpr = d.ast;
       baseMT.abs:baseType = abs:errorType();
       baseMT.abs:typeModifierIn = abs:baseTypeExpr();
-      baseMT.abs:returnType = nothing();
+      baseMT.abs:controlStmtContext = abs:initialControlStmtContext;
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
         | false, abs:functionTypeExprWithArgs(t, p, v, q) ->
@@ -89,6 +90,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         case baseMT of
         | abs:functionTypeExprWithArgs(t, p, v, q) -> q
         | abs:functionTypeExprWithoutArgs(t, v, q) -> q
+        | _ -> abs:nilQualifier()
         end;
       
       local bt :: abs:BaseTypeExpr =
@@ -98,7 +100,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
       local baseMT  :: abs:TypeModifierExpr = d.ast;
       baseMT.abs:baseType = abs:errorType();
       baseMT.abs:typeModifierIn = abs:baseTypeExpr();
-      baseMT.abs:returnType = nothing();
+      baseMT.abs:controlStmtContext = abs:initialControlStmtContext;
       local mt :: abs:TypeModifierExpr =
         case l.isDeclListEmpty, baseMT of
         | false, abs:functionTypeExprWithArgs(t, p, v, q) ->
