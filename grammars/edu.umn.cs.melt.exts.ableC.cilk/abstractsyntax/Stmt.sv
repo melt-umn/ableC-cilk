@@ -6,10 +6,12 @@ synthesized attribute syncLocations :: [Location] occurs on Stmt;
 -- StructItemList to be put into scopes in cilk frame
 synthesized attribute cilkFrameDeclsScopes :: [Pair<String StructItem>] occurs on Stmt, Expr, Exprs, ExprOrTypeName, Parameters, Decls, Decl;
 
-autocopy    attribute cilkLinksInh :: [Init] occurs on Stmt;
+inherited   attribute cilkLinksInh :: [Init] occurs on Stmt;
 synthesized attribute cilkLinks    :: [Init] occurs on Stmt;
 
-autocopy    attribute cilkProcName :: Name occurs on Stmt;
+inherited   attribute cilkProcName :: Name occurs on Stmt;
+propagate cilkLinksInh, cilkProcName on Stmt excluding
+   seqStmt, ifStmt;
 
 aspect production nullStmt
 top::Stmt ::=
@@ -26,6 +28,9 @@ top::Stmt ::= h::Stmt  t::Stmt
 
   top.cilkFrameDeclsScopes = h.cilkFrameDeclsScopes ++ t.cilkFrameDeclsScopes;
 
+  propagate cilkProcName;
+
+  h.cilkLinksInh = top.cilkLinksInh;
   t.cilkLinksInh = h.cilkLinks;
   top.cilkLinks = t.cilkLinks;
 }
@@ -78,6 +83,9 @@ top::Stmt ::= c::Expr t::Stmt e::Stmt
 
   top.cilkFrameDeclsScopes = c.cilkFrameDeclsScopes ++ t.cilkFrameDeclsScopes ++ e.cilkFrameDeclsScopes;
 
+  propagate cilkProcName;
+
+  t.cilkLinksInh = top.cilkLinksInh;
   e.cilkLinksInh = t.cilkLinks;
   top.cilkLinks = e.cilkLinks;
 }
