@@ -7,6 +7,8 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(),
                   f.pp, parens( ppImplode(text(","), args.pps) ) ]);
 
+  propagate controlStmtContext, env;
+
   s.functionDefs := [];
   s.labelDefs := [];
 
@@ -80,6 +82,8 @@ abstract production cilkSpawnStmtNoEqOp
 s::Stmt ::= f::Expr args::Exprs
 {
   s.pp = ppConcat([ text("spawn"), space(), f.pp, parens( ppImplode(text(","), args.pps) ) ]);
+
+  propagate controlStmtContext, env;
 
   s.functionDefs := [];
   s.labelDefs := [];
@@ -161,6 +165,8 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
   -- reserve a sync number
   s.syncLocations = [loc];
 
+  propagate controlStmtContext, env;
+
   local syncCount :: Integer = lookupSyncCount(loc, s.env);
 
   local beforeSpawnFast :: Stmt =
@@ -198,6 +204,8 @@ s::Stmt ::= l::Expr callF::Expr
   s.pp = ppConcat([ text("spawn"), space(), l.pp, space(), text("="), space(), callF.pp]);
   s.functionDefs := [];
   s.labelDefs := [];
+
+  propagate controlStmtContext, env;
 
   local lIsGlobal :: Boolean =
     !contains(lName.name, map(fst, foldr(append, [], map(tm:toList, take(length(s.env.scopeIds)-1, s.env.scopeIds)))));

@@ -38,6 +38,12 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   fnquals.env = top.env;
   fnquals.controlStmtContext = top.controlStmtContext;
 
+  bty.env = top.env;
+  bty.controlStmtContext = top.controlStmtContext;
+
+  mty.env = top.env;
+  mty.controlStmtContext = top.controlStmtContext;
+
   local newName :: Name = case fname.name of
                           | "main" -> name("cilk_main", location=fname.location)
                           | _ -> fname
@@ -135,6 +141,8 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
     bty.pp, space(), mty.lpp, fname.pp, mty.rpp, ppAttributesRHS(attrs), line(),
     semi()]);
 
+  propagate controlStmtContext, env;
+
   bty.givenRefId = nothing();
   mty.baseType = bty.typerep;
   mty.typeModifierIn = bty.typeModifier;
@@ -225,6 +233,8 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
       ])
     );
 
+  propagate controlStmtContext;
+
   -- collect all fields with the same scopeId into a list and pair with the scopeId
   local frameDeclsByScopes :: [Pair<String [StructItem]>] =
     collectFrameDecls(args.cilkFrameDeclsScopes ++ body.cilkFrameDeclsScopes, []);
@@ -233,6 +243,7 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
     cons(header, map(makeFrameDeclsScope, frameDeclsByScopes));
   
   args.position = 0;
+  args.env = top.env;
   body.env = top.env;
 
   forwards to
@@ -382,6 +393,8 @@ abstract production makeArgsAndResultStruct
 top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Parameters
 {
   top.pp = text("cilkMakeArgsAndResultStruct()");
+
+  propagate controlStmtContext, env;
 
   local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtinLoc(MODULE_NAME));
   local resultField :: StructItem =
@@ -976,6 +989,8 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
   top.functionDefs := fastClone.functionDefs;
   top.labelDefs := fastClone.labelDefs;
 
+  propagate controlStmtContext, env;
+
 
   local fastClone :: Stmt =
     foldStmt([
@@ -1186,6 +1201,8 @@ top::Stmt ::= body::Stmt args::Parameters
           top.env
         );
 
+  args.controlStmtContext = top.controlStmtContext;
+  args.env = top.env;
   args.position = 0;
   local argDecls :: Stmt = makeArgDecls(args);
   argDecls.env = top.env;
