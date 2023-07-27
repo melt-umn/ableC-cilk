@@ -69,7 +69,7 @@ top::ParameterDecl ::= storage::StorageClasses bty::BaseTypeExpr mty::TypeModifi
   local scopeId :: String = toString(n.location.line);
 
   top.cilkFrameDeclsScope =
-    pair(
+    (
       scopeId,
       structItem(
         attrs,
@@ -127,7 +127,7 @@ top::Decl ::= decls::Decls
 aspect production variableDecls
 top::Decl ::= storage::StorageClasses  attrs::Attributes  ty::BaseTypeExpr  dcls::Declarators
 {
-  top.cilkFrameDeclsScopes = [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
+  top.cilkFrameDeclsScopes = [(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))];
 }
 
 aspect production typeExprDecl
@@ -189,8 +189,7 @@ top::Decl ::= name::Name  e::Expr
   top.defs <- [scopeIdDef(name.name, scopeId)];
 
   top.cilkFrameDeclsScopes =
-    [pair(
-      scopeId,
+    [(scopeId,
       structItem(
         nilAttribute(),
         directTypeExpr(e.typerep),

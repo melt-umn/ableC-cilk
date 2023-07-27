@@ -131,7 +131,7 @@ top::Stmt ::= i::Decl c::MaybeExpr s::MaybeExpr b::Stmt
   top.cilkFrameDeclsScopes =
     case i of
     | variableDecls(_, attrs, ty, dcls) ->
-        [pair(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))]
+        [(dcls.scopeId, structItem(attrs, ty, dcls.cilkFrameDecls))]
     | _ -> error("for loop decl not variableDecls")
     end ++
     case c of justExpr(e) -> e.cilkFrameDeclsScopes | nothingExpr() -> [] end ++

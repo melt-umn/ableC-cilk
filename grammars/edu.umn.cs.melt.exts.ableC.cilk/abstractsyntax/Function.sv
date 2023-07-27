@@ -8,7 +8,7 @@ imports edu:umn:cs:melt:ableC:abstractsyntax:env;
 aspect production functionDeclaration
 top::Decl ::= f::FunctionDecl
 {
---  top.globalDecls <- [pair("CILK_WHERE_AM_I", inCCode())];
+--  top.globalDecls <- [("CILK_WHERE_AM_I", inCCode())];
 }
 
 {- somewhat similar to cilkc2c/transform.c:TransformCilkProc() -}
@@ -278,12 +278,12 @@ function addDeclToScopes
 {
   return
     if   null(cilkFrameDeclsByScopes)
-    then [pair(fst(cilkFrameDecl), [snd(cilkFrameDecl)])]
+    then [(fst(cilkFrameDecl), [snd(cilkFrameDecl)])]
     else
       if   fst(head(cilkFrameDeclsByScopes)) == fst(cilkFrameDecl)
       then
         cons(
-          pair(
+          (
             fst(cilkFrameDecl),
             cons(snd(cilkFrameDecl), snd(head(cilkFrameDeclsByScopes)))
           ),
