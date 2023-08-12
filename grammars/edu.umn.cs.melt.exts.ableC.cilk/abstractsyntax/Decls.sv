@@ -28,9 +28,10 @@ top::Declarator ::= name::Name ty::TypeModifierExpr attrs::Attributes
                     initializer::MaybeInitializer
 {
   top.scopeId =
-    if name.location.line >= 0
-    then toString(name.location.line)
-    else "gen";
+    case getParsedOriginLocation(name) of
+    | just(l) -> toString(l.line)
+    | nothing() -> "gen"
+    end;
   top.defs <- [scopeIdDef(name.name, top.scopeId)];
 
   top.cilkFrameDecl = structField(name, ty, attrs);
@@ -66,7 +67,11 @@ top::ParameterDecl ::= storage::StorageClasses bty::BaseTypeExpr mty::TypeModifi
     | _            -> error("cilk function parameter must be named")
     end;
 
-  local scopeId :: String = toString(n.location.line);
+  local scopeId :: String =
+    case getParsedOriginLocation(name) of
+    | just(l) -> toString(l.line)
+    | nothing() -> "gen"
+    end;
 
   top.cilkFrameDeclsScope =
     (
@@ -183,9 +188,10 @@ aspect production autoDecl
 top::Decl ::= name::Name  e::Expr
 {
   local scopeId::String =
-    if name.location.line >= 0
-    then toString(name.location.line)
-    else "gen";
+    case getParsedOriginLocation(name) of
+    | just(l) -> toString(l.line)
+    | nothing() -> "gen"
+    end;
   top.defs <- [scopeIdDef(name.name, scopeId)];
 
   top.cilkFrameDeclsScopes =

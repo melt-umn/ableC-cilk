@@ -17,11 +17,11 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
-      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+      declRefExpr(name("_cilk_ws")),
       args
     );
 
-  local syncCount :: Integer = lookupSyncCount(l.location, s.env);
+  local syncCount :: Integer = lookupSyncCount(l.s.env);
 
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
 
@@ -30,8 +30,8 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
 
   local callF :: Expr =
     case f of
-    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtinLoc(MODULE_NAME))
-    | _               -> callExpr(f, newArgs, location=builtinLoc(MODULE_NAME))
+    | declRefExpr(id) -> directCallExpr(id, newArgs)
+    | _               -> callExpr(f, newArgs)
     end;
 
   s.errors := case fast,slow of
@@ -46,7 +46,7 @@ s::Stmt ::= l::Expr f::Expr args::Exprs
     | true,false  -> cilk_fastCloneSpawnWithEqOp(l, callF)
     | false,true  -> cilk_slowCloneSpawnWithEqOp(l, callF)
     | true,true   -> error ("We think we're in both a fast and a slow clone!1")
-    | false,false -> exprStmt(eqExpr(l, callF, location=builtinLoc(MODULE_NAME)))
+    | false,false -> exprStmt(eqExpr(l, callF))
     end;
 
   -- this causes sync to fail because lookupMisc(cilk_in_fast_clone) fails
@@ -73,9 +73,9 @@ s::Stmt ::= l::Expr callF::Expr
 
   -- l = callF();
   -- TODO: handle assignOps other than eq
-  local assignExpr :: Expr = eqExpr(l, callF, location=builtinLoc(MODULE_NAME));
+  local assignExpr :: Expr = eqExpr(l, callF);
 
-  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l), l.location);
+  forwards to cilk_fastCloneSpawn(assignExpr, justExpr(l));
 }
 
 abstract production cilkSpawnStmtNoEqOp
@@ -95,17 +95,17 @@ s::Stmt ::= f::Expr args::Exprs
   -- add _cilk_ws as first argument
   local newArgs :: Exprs =
     consExpr(
-      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+      declRefExpr(name("_cilk_ws")),
       args
     );
 
   local callF :: Expr =
     case f of
-    | declRefExpr(id) -> directCallExpr(id, newArgs, location=builtinLoc(MODULE_NAME))
-    | _               -> callExpr(f, newArgs, location=builtinLoc(MODULE_NAME))
+    | declRefExpr(id) -> directCallExpr(id, newArgs)
+    | _               -> callExpr(f, newArgs)
     end;
 
-  local syncCount :: Integer = lookupSyncCount(f.location, s.env);
+  local syncCount :: Integer = lookupSyncCount(f.s.env);
 
   local setHeaderEntry :: Stmt = makeSetHeaderEntry(syncCount);
 
@@ -121,8 +121,8 @@ s::Stmt ::= f::Expr args::Exprs
 
   local spawnStmt :: Stmt =
     case fast, slow of
-    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr(), f.location)
-    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt(), f.location)
+    | true,false  -> cilk_fastCloneSpawn(callF, nothingExpr())
+    | false,true  -> cilk_slowCloneSpawn(callF, nothingExpr(), nullStmt())
     | true,true   -> error ("We think we're in both a fast and a slow clone!3")
 --    | false,false -> error ("We don't think we're in a fast or slow clone!4")
     | false,false -> exprStmt(callF)
@@ -135,13 +135,12 @@ s::Stmt ::= f::Expr args::Exprs
          cons(
            positionalInit(objectInitializer(
              foldInit([
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
-             ]),
-             location=builtinLoc(MODULE_NAME)
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0)))
+             ])
            )),
            s.cilkLinksInh
          )
@@ -171,19 +170,19 @@ s::Stmt ::= call::Expr ml::MaybeExpr loc::Location
 
   local beforeSpawnFast :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_FAST() macro")),
       ableC_Stmt { Cilk_cilk2c_before_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro")),
       ableC_Stmt { Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local afterSpawnFast :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_FAST() macro")),
       ableC_Stmt { Cilk_cilk2c_after_spawn_fast_cp(_cilk_ws, &(_cilk_frame->header)); },
       ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
     ]);
@@ -217,21 +216,19 @@ s::Stmt ::= l::Expr callF::Expr
          cons(
            positionalInit(objectInitializer(
              foldInit([
-               positionalInit(exprInitializer(sizeofL, location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(frameOffset, location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-               positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
-             ]),
-             location=builtinLoc(MODULE_NAME)
+               positionalInit(exprInitializer(sizeofL)),
+               positionalInit(exprInitializer(frameOffset)),
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0))),
+               positionalInit(exprInitializer(mkIntConst(0)))
+             ])
            )),
            s.cilkLinksInh
          );
 
   local sizeofL :: Expr =
     sizeofExpr(
-      typeNameExpr(typeName(directTypeExpr(l.typerep), baseTypeExpr())),
-      location=builtinLoc(MODULE_NAME)
+      typeNameExpr(typeName(directTypeExpr(l.typerep), baseTypeExpr()))
     );
 
   -- FIXME: l should be an id, not an Expr
@@ -243,8 +240,8 @@ s::Stmt ::= l::Expr callF::Expr
 
   -- TODO: check that lookupScopeId does not return Nil
   local lScopeId :: String = head(lookupScopeId(lName.name, s.env));
-  local scopeName :: Name = name("scope" ++ lScopeId, location=builtinLoc(MODULE_NAME));
-  local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame", location=builtinLoc(MODULE_NAME));
+  local scopeName :: Name = name("scope" ++ lScopeId);
+  local frameName :: Name = name("_cilk_" ++ s.cilkProcName.name ++ "_frame");
 
   local saveL :: Stmt =
     if   lIsGlobal
@@ -259,7 +256,7 @@ s::Stmt ::= l::Expr callF::Expr
   local frameOffset :: Expr =
     explicitCastExpr(
       typeName(
-        typedefTypeExpr(nilQualifier(), name("size_t", location=builtinLoc(MODULE_NAME))),
+        typedefTypeExpr(nilQualifier(), name("size_t")),
         baseTypeExpr()
       ),
       subExpr(
@@ -276,20 +273,16 @@ s::Stmt ::= l::Expr callF::Expr
                     tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
                     pointerTypeExpr(nilQualifier(), baseTypeExpr())
                   ),
-                  mkIntConst(0, builtinLoc(MODULE_NAME)),
-                  location=builtinLoc(MODULE_NAME)
+                  mkIntConst(0)
                 ),
                 true,
-                scopeName,
-                location=builtinLoc(MODULE_NAME)
+                scopeName
               ),
               false,
-              lName,
-              location=builtinLoc(MODULE_NAME)
+              lName
             ),
             builtinLoc(MODULE_NAME)
-          ),
-          location=builtinLoc(MODULE_NAME)
+          )
         ),
         explicitCastExpr(
           typeName(
@@ -301,20 +294,16 @@ s::Stmt ::= l::Expr callF::Expr
               tagReferenceTypeExpr(nilQualifier(), structSEU(), frameName),
               pointerTypeExpr(nilQualifier(), baseTypeExpr())
             ),
-            mkIntConst(0, builtinLoc(MODULE_NAME)),
-            location=builtinLoc(MODULE_NAME)
-          ),
-          location=builtinLoc(MODULE_NAME)
-        ),
-        location=builtinLoc(MODULE_NAME)
-      ),
-      location=builtinLoc(MODULE_NAME)
+            mkIntConst(0)
+          )
+        )
+      )
     );
 
   -- l = callF();
-  local assignExpr :: Expr = eqExpr(l, callF, location=builtinLoc(MODULE_NAME));
+  local assignExpr :: Expr = eqExpr(l, callF);
 
-  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL, l.location);
+  forwards to cilk_slowCloneSpawn(assignExpr, justExpr(l), saveL);
 }
 
 abstract production cilk_slowCloneSpawn
@@ -332,33 +321,33 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_BEFORE_SPAWN_SLOW() macro
   local beforeSpawnSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_BEFORE_SPAWN_SLOW() macro")),
       ableC_Stmt { Cilk_cilk2c_before_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local pushFrame :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_PUSH_FRAME() macro")),
       ableC_Stmt { Cilk_cilk2c_push_frame(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   -- expand CILK2C_AFTER_SPAWN_SLOW() macro
   local afterSpawnSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_AFTER_SPAWN_SLOW() macro")),
       ableC_Stmt { Cilk_cilk2c_after_spawn_slow_cp(_cilk_ws, &(_cilk_frame->header)); }
     ]);
 
   local recoveryStmt :: Stmt =
     ifStmtNoElse(
-      mkIntConst(0, builtinLoc(MODULE_NAME)),
+      mkIntConst(0),
       foldStmt([
         -- TODO: in the long term, txtStmt should be replaced with labelStmt,
         --       but there are issues with functiondefs being overridden in
         --       cilkSpawnStmt, see ableC Issue #77 for more info
         --       https://github.com/melt-umn/ableC/issues/77
         txtStmt("_cilk_sync" ++ toString(syncCount) ++ ":;"),
---        labelStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)), nullStmt()),
+--        labelStmt(name("_cilk_sync" ++ toString(syncCount)), nullStmt()),
         restoreVariables(s.env)
       ])
     );
@@ -366,7 +355,7 @@ s::Stmt ::= call::Expr ml::MaybeExpr saveAssignedVar::Stmt loc::Location
   -- expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro
   local atThreadBoundary :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_AT_THREAD_BOUNDARY_SLOW() macro")),
       ableC_Stmt { Cilk_cilk2c_at_thread_boundary_slow_cp(_cilk_ws, &(_cilk_frame->header)); },
       ableC_Stmt { Cilk_cilk2c_event_new_thread_maybe(_cilk_ws); }
     ]);
@@ -427,7 +416,7 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   l.env = top.env;
   l.controlStmtContext = top.controlStmtContext;
 
-  local tmpName :: Name = name("__tmp" ++ toString(genInt()), location=builtinLoc(MODULE_NAME));
+  local tmpName :: Name = name("__tmp" ++ toString(genInt()));
   local tmpDecl :: Stmt =
     declStmt(
       variableDecls(nilStorageClass(), nilAttribute(),
@@ -455,14 +444,13 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
     | nothingExpr() -> nullStmt()
     end;
 
-  local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME));
+  local ws :: Expr = declRefExpr(name("_cilk_ws"));
 
   local xPopFrameResult :: Stmt =
     ifStmtNoElse(
       directCallExpr(
-        name("Cilk_cilk2c_pop_check", location=builtinLoc(MODULE_NAME)),
-        foldExpr([ws]),
-        location=builtinLoc(MODULE_NAME)
+        name("Cilk_cilk2c_pop_check"),
+        foldExpr([ws])
       ),
       foldStmt([
         mAssignTmp,
@@ -470,23 +458,22 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
       ])
     );
 
-  local tmp :: Expr = declRefExpr(tmpName, location=builtinLoc(MODULE_NAME));
-  local assignTmp :: Stmt = exprStmt(eqExpr( tmp, l, location=builtinLoc(MODULE_NAME)));
+  local tmp :: Expr = declRefExpr(tmpName);
+  local assignTmp :: Stmt = exprStmt(eqExpr( tmp, l));
 
   local tmpAddr :: Expr =
     case ml of
-    | justExpr(_)   -> mkAddressOf(tmp, builtinLoc(MODULE_NAME))
-    | nothingExpr() -> mkIntConst(0, builtinLoc(MODULE_NAME))
+    | justExpr(_)   -> mkAddressOf(tmp)
+    | nothingExpr() -> mkIntConst(0)
     end;
 
   local sizeofTmp :: Expr =
     case ml of
     | justExpr(_) ->
         sizeofExpr(
-          exprExpr(tmp),
-          location=builtinLoc(MODULE_NAME)
+          exprExpr(tmp)
         )
-    | nothingExpr() -> mkIntConst(0, builtinLoc(MODULE_NAME))
+    | nothingExpr() -> mkIntConst(0)
     end;
 
   -- TODO: correct XPOP_FRAME_RESULT return
@@ -506,13 +493,12 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
   local ifExceptionHandler :: Stmt =
     ifStmtNoElse(
       directCallExpr(
-        name("Cilk_exception_handler", location=builtinLoc(MODULE_NAME)),
+        name("Cilk_exception_handler"),
         foldExpr([
           ws,
           tmpAddr,
           sizeofTmp
-        ]),
-        location=builtinLoc(MODULE_NAME)
+        ])
       ),
       foldStmt([
         ableC_Stmt { Cilk_cilk2c_pop(_cilk_ws); },
@@ -522,8 +508,8 @@ top::Stmt ::= ml::MaybeExpr isSlow::Boolean
 
   local expandComment :: Stmt =
     case ml of
-    | justExpr(_)   -> exprStmt(comment("expand CILK2C_XPOP_FRAME_RESULT() macro", location=builtinLoc(MODULE_NAME)))
-    | nothingExpr() -> exprStmt(comment("expand CILK2C_XPOP_FRAME_NORESULT() macro", location=builtinLoc(MODULE_NAME)))
+    | justExpr(_)   -> exprStmt(comment("expand CILK2C_XPOP_FRAME_RESULT() macro"))
+    | nothingExpr() -> exprStmt(comment("expand CILK2C_XPOP_FRAME_NORESULT() macro"))
     end;
 
   forwards to
@@ -547,17 +533,14 @@ Stmt ::= syncCount::Integer
         memberExpr(
           -- cilk_frame->header
           memberExpr(
-            declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+            declRefExpr(name("_cilk_frame")),
             true,
-            name("header", location=builtinLoc(MODULE_NAME)),
-            location=builtinLoc(MODULE_NAME)
+            name("header")
           ),
           false,
-          name("entry", location=builtinLoc(MODULE_NAME)),
-          location=builtinLoc(MODULE_NAME)
+          name("entry")
         ),
-        mkIntConst(syncCount, builtinLoc(MODULE_NAME)),
-        location=builtinLoc(MODULE_NAME)
+        mkIntConst(syncCount)
       )
     );
 }

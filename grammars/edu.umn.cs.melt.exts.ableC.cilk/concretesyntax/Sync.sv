@@ -15,6 +15,6 @@ marking terminal CilkSync_t 'sync' lexer classes {Keyword, Global};
 concrete production cilk_sync_c
 top::Stmt_c ::= 'sync' ';'
 {
-  top.ast = cilk_syncStmt(top.location);
+  top.ast = cilk_syncStmt();
 }
 

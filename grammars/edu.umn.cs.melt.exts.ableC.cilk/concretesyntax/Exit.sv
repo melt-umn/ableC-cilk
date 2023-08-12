@@ -22,7 +22,7 @@ top::IterationStmt_c ::= 'cilk_exit' rb::ExitBody
   top.ast = rb.ast;
 }
 
-nonterminal ExitBody with location, ast<abs:Stmt> ;
+nonterminal ExitBody with ast<abs:Stmt> ;
 concrete productions rb::ExitBody
 | ';'
     { rb.ast = cilk_exitStmt(abs:nothingExpr()); }

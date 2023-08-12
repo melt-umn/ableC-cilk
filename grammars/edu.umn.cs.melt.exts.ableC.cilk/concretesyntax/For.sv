@@ -28,7 +28,7 @@ concrete productions top::IterationStmt_c
   }
 
 
-closed nonterminal CilkForBody_c with ast<abs:Stmt>, location;
+closed nonterminal CilkForBody_c with ast<abs:Stmt>;
 
 concrete productions top::CilkForBody_c
 | '{' f::PostfixExpr_c '(' args::ArgumentExprList_c ')' ';' '}'

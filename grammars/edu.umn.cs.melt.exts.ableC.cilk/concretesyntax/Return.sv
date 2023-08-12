@@ -15,7 +15,7 @@ top::Stmt_c ::= 'cilk' rb::ReturnBody
   top.ast = rb.ast;
 }
 
-nonterminal ReturnBody with location, ast<abs:Stmt> ;
+nonterminal ReturnBody with ast<abs:Stmt> ;
 concrete productions rb::ReturnBody
 | 'return' ';'
     { rb.ast = cilk_returnStmt(abs:nothingExpr()); }

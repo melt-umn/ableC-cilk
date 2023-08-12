@@ -15,7 +15,7 @@ top::Declaration_c ::= 'cilk' f::CilkFunctionDefinition_c
   top.ast = f.ast;
 }
 
-closed nonterminal CilkFunctionDefinition_c with location, ast<abs:Decl>;
+closed nonterminal CilkFunctionDefinition_c with ast<abs:Decl>;
 concrete productions top::CilkFunctionDefinition_c
 | d::CilkInitialFunctionDefinition_c  s::CompoundStatement_c
   {
@@ -30,7 +30,7 @@ concrete productions top::CilkFunctionDefinition_c
     ds.givenQualifiers = ds.typeQualifiers;
     d.givenType = abs:baseTypeExpr();
     local bt :: abs:BaseTypeExpr =
-      abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
+      abs:figureOutTypeFromSpecifiers(ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
 
     local specialSpecifiers :: abs:SpecialSpecifiers =
       foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
@@ -42,7 +42,7 @@ concrete productions top::CilkFunctionDefinition_c
       );
   }
 
-closed nonterminal CilkInitialFunctionDefinition_c with location, ast<abs:Decl>, givenStmt;
+closed nonterminal CilkInitialFunctionDefinition_c with ast<abs:Decl>, givenStmt;
 concrete productions top::CilkInitialFunctionDefinition_c
 | ds::DeclarationSpecifiers_c  d::Declarator_c  l::InitiallyUnqualifiedDeclarationList_c
     {
@@ -59,7 +59,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         foldr(abs:consSpecialSpecifier, abs:nilSpecialSpecifier(), ds.specialSpecifiers);
       
       local bt :: abs:BaseTypeExpr =
-        abs:figureOutTypeFromSpecifiers(ds.location, ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
+        abs:figureOutTypeFromSpecifiers(ds.typeQualifiers, ds.preTypeSpecifiers, ds.realTypeSpecifiers, ds.mutateTypeSpecifiers);
       
       -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
       local baseMT  :: abs:TypeModifierExpr = d.ast;
@@ -94,7 +94,7 @@ concrete productions top::CilkInitialFunctionDefinition_c
         end;
       
       local bt :: abs:BaseTypeExpr =
-        abs:figureOutTypeFromSpecifiers(d.location, abs:nilQualifier(), [], [], []);
+        abs:figureOutTypeFromSpecifiers(abs:nilQualifier(), [], [], []);
       
       -- If this is a K&R-style declaration, attatch any function qualifiers to the first declaration instead
       local baseMT  :: abs:TypeModifierExpr = d.ast;
