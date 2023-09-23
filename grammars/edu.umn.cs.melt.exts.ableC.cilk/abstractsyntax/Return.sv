@@ -5,6 +5,8 @@ r::Stmt ::= e::MaybeExpr
 {
   r.pp = ppConcat ([ text("cilk"), space(), text("return"), space(), parens(e.pp) ]);
 
+  propagate controlStmtContext, env;
+
   -- r.env depends on these, if not set then compiler will crash while looping
   --  in forwarded returnStmt to look for these
   r.globalDecls := e.globalDecls;
