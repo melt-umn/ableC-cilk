@@ -74,7 +74,7 @@ top::Def ::=
 abstract production scopeIdDef
 top::Def ::= s::String scopeId::String
 {
-  top.scopeIdContribs = [pair(s, scopeId)];
+  top.scopeIdContribs = [(s, scopeId)];
 }
 
 function lookupScopeId
@@ -86,7 +86,7 @@ function lookupScopeId
 abstract production syncLocationsDef
 top::Def ::= s::String syncLocations::[Location]
 {
-  top.envSyncLocationsContribs = [pair(s, syncLocations)];
+  top.envSyncLocationsContribs = [(s, syncLocations)];
 }
 
 function lookupSyncLocations
