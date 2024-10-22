@@ -45,7 +45,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   mty.controlStmtContext = top.controlStmtContext;
 
   local newName :: Name = case fname.name of
-                          | "main" -> name("cilk_main", location=fname.location)
+                          | "main" -> name("cilk_main")
                           | _ -> fname
                           end;
 
@@ -94,9 +94,9 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   local newBody :: Stmt =
     if   returnsVoid
     then foldStmt([
-           body, cilk_syncStmt(fname.location), cilk_returnStmt(nothingExpr())
+           body, cilk_syncStmt(), cilk_returnStmt(nothingExpr())
          ])
-    else foldStmt([body, cilk_syncStmt(fname.location)]);
+    else foldStmt([body, cilk_syncStmt()]);
 
   local slowCloneDecl :: Decl = slowClone(newName, dcls, slowCloneBody);
   local slowCloneBody :: Stmt = transformSlowClone(newBody, args);
@@ -147,7 +147,7 @@ top::Decl ::= storage::StorageClasses  fnquals::SpecialSpecifiers
   mty.baseType = bty.typerep;
   mty.typeModifierIn = bty.typeModifier;
 
-  local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtinLoc(MODULE_NAME));
+  local slowName :: Name = name("_cilk_" ++ fname.name ++ "_slow");
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
 
   local slowMty :: TypeModifierExpr =
@@ -227,9 +227,9 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
   local header :: StructItem =
     structItem(
       nilAttribute(),
-      typedefTypeExpr(nilQualifier(), name("CilkStackFrame", location=builtinLoc(MODULE_NAME))),
+      typedefTypeExpr(nilQualifier(), name("CilkStackFrame")),
       foldStructDeclarator([
-        structField(name("header", location=builtinLoc(MODULE_NAME)), baseTypeExpr(), nilAttribute())
+        structField(name("header"), baseTypeExpr(), nilAttribute())
       ])
     );
 
@@ -252,9 +252,8 @@ top::Decl ::= newName::Name args::Parameters body::Stmt
         nilQualifier(),
         structDecl(
           nilAttribute(),
-          justName(name("_cilk_" ++ newName.name ++ "_frame", location=builtinLoc(MODULE_NAME))),
-          foldStructItem(frameFields),
-          location=builtinLoc(MODULE_NAME)
+          justName(name("_cilk_" ++ newName.name ++ "_frame")),
+          foldStructItem(frameFields)
         )
       )
     );
@@ -307,14 +306,13 @@ StructItem ::= cilkFrameDecl::Pair<String [StructItem]>
         nilQualifier(),
         structDecl(
           nilAttribute(),
-          justName(name("_cilk_frame_" ++ toString(genInt()), location=builtinLoc(MODULE_NAME))),
-          foldStructItem(snd(cilkFrameDecl)),
-          location=builtinLoc(MODULE_NAME)
+          justName(name("_cilk_frame_" ++ toString(genInt()))),
+          foldStructItem(snd(cilkFrameDecl))
         )
       ),
       foldStructDeclarator([
         structField(
-          name("scope" ++ fst(cilkFrameDecl), location=builtinLoc(MODULE_NAME)),
+          name("scope" ++ fst(cilkFrameDecl)),
           baseTypeExpr(),
           nilAttribute()
         )
@@ -343,7 +341,7 @@ StructItem ::= n::String  env::Decorated Env
       nilAttribute(), -- TODO: attributes?
       value.typerep.baseTypeExpr,
       foldStructDeclarator([
-        structField(name(n, location=builtinLoc(MODULE_NAME)), value.typerep.typeModifierExpr, nilAttribute())
+        structField(name(n), value.typerep.typeModifierExpr, nilAttribute())
       ])
     );
 }
@@ -364,15 +362,14 @@ StructItemList ::= cilkFrameDeclsScopes::[[StructItem]] scopeCount::Integer
                   nilQualifier(),
                   structDecl(
                     nilAttribute(),
-                    justName(name("_cilk_frame_" ++ toString(genInt()), location=builtinLoc(MODULE_NAME))),
+                    justName(name("_cilk_frame_" ++ toString(genInt()))),
 --                    nilStructItem(),
-                    foldStructItem(head(cilkFrameDeclsScopes)),
-                    location=builtinLoc(MODULE_NAME)
+                    foldStructItem(head(cilkFrameDeclsScopes))
                   )
                 ),
                 foldStructDeclarator([
                   structField(
-                    name("scope" ++ toString(scopeCount), location=builtinLoc(MODULE_NAME)),
+                    name("scope" ++ toString(scopeCount)),
                     baseTypeExpr(),
                     nilAttribute()
                   )
@@ -396,13 +393,13 @@ top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Pa
 
   propagate controlStmtContext, env;
 
-  local structName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtinLoc(MODULE_NAME));
+  local structName :: Name = name("_cilk_" ++ fname.name ++ "_args");
   local resultField :: StructItem =
     structItem(
       nilAttribute(),
       bty,
       foldStructDeclarator([
-        structField(name("_cilk_proc_result", location=builtinLoc(MODULE_NAME)), retMty, nilAttribute())
+        structField(name("_cilk_proc_result"), retMty, nilAttribute())
       ])
     );
 
@@ -421,7 +418,7 @@ top::Decl ::= fname::Name  bty::BaseTypeExpr  retMty::TypeModifierExpr  args::Pa
     typeExprDecl(nilAttribute(),
       structTypeExpr(
         nilQualifier(),
-        structDecl(nilAttribute(), justName(structName), fields, location=builtinLoc(MODULE_NAME))
+        structDecl(nilAttribute(), justName(structName), fields)
       )
     );
 }
@@ -513,7 +510,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      exprStmt(comment("TODO: restore only live variables", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("TODO: restore only live variables")),
       foldStmt(map(restoreVariable, cilkFrameVars))
     ]);
 }
@@ -523,7 +520,7 @@ Stmt ::= cilkFrameVar::Pair<String String>
 {
   local n :: String = fst(cilkFrameVar);
   local scopeId :: String = snd(cilkFrameVar);
-  local scopeName :: Name = name("scope" ++ scopeId, location=builtinLoc(MODULE_NAME));
+  local scopeName :: Name = name("scope" ++ scopeId);
 
   return
     -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
@@ -532,19 +529,16 @@ Stmt ::= cilkFrameVar::Pair<String String>
       -- n = _cilk_frame->scopeX.n;
       exprStmt(
         eqExpr(
-          declRefExpr(name(n, location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+          declRefExpr(name(n)),
           memberExpr(
             memberExpr(
-              declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+              declRefExpr(name("_cilk_frame")),
               true,
-              scopeName,
-              location=builtinLoc(MODULE_NAME)
+              scopeName
             ),
             false,
-            name(n, location=builtinLoc(MODULE_NAME)),
-            location=builtinLoc(MODULE_NAME)
-          ),
-          location=builtinLoc(MODULE_NAME)
+            name(n)
+          )
         )
       )
     else
@@ -560,7 +554,7 @@ Stmt ::= env::Decorated Env
 
   return
     foldStmt([
-      exprStmt(comment("TODO: save only live, dirty variables", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("TODO: save only live, dirty variables")),
       foldStmt(map(saveVariable, cilkFrameVars))
     ]);
 }
@@ -570,7 +564,7 @@ Stmt ::= cilkFrameVar::Pair<String String>
 {
   local n :: String = fst(cilkFrameVar);
   local scopeId :: String = snd(cilkFrameVar);
-  local scopeName :: Name = name("scope" ++ scopeId, location=builtinLoc(MODULE_NAME));
+  local scopeName :: Name = name("scope" ++ scopeId);
 
   return
     -- TODO: avoid putting _cilk_ws/frame into defs instead of handling as special case
@@ -581,17 +575,14 @@ Stmt ::= cilkFrameVar::Pair<String String>
         eqExpr(
           memberExpr(
             memberExpr(
-              declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+              declRefExpr(name("_cilk_frame")),
               true,
-              scopeName,
-              location=builtinLoc(MODULE_NAME)
+              scopeName
             ),
             false,
-            name(n, location=builtinLoc(MODULE_NAME)),
-            location=builtinLoc(MODULE_NAME)
+            name(n)
           ),
-          declRefExpr(name(n, location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-          location=builtinLoc(MODULE_NAME)
+          declRefExpr(name(n))
         )
       )
     else nullStmt();
@@ -604,7 +595,7 @@ Decl ::= fname::Name body::Stmt
   local storage :: StorageClasses = foldStorageClass([staticStorageClass()]);
   local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
   local bty :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
-  local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import", location=builtinLoc(MODULE_NAME));
+  local importProcName :: Name = name("_cilk_" ++ fname.name ++ "_import");
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
 
@@ -614,16 +605,16 @@ Decl ::= fname::Name body::Stmt
     foldParameterDecl([
       parameterDecl(
         nilStorageClass(),
-        typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=builtinLoc(MODULE_NAME))),
-        pointerTypeExpr(foldQualifier([constQualifier(location=builtinLoc(MODULE_NAME))]), baseTypeExpr()),
-        justName(name("_cilk_ws", location=builtinLoc(MODULE_NAME))),
+        typedefTypeExpr(nilQualifier(), name("CilkWorkerState")),
+        pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+        justName(name("_cilk_ws")),
         nilAttribute()
       ),
       parameterDecl(
         nilStorageClass(),
         directTypeExpr(builtinType(nilQualifier(), voidType())),
         pointerTypeExpr(nilQualifier(), baseTypeExpr()),
-        justName(name("_cilk_procargs_v", location=builtinLoc(MODULE_NAME))),
+        justName(name("_cilk_procargs_v")),
         nilAttribute()
       )
     ]);
@@ -650,8 +641,7 @@ Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
         directTypeExpr(builtinType(nilQualifier(), voidType())),
         baseTypeExpr()
       ),
-      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-      location=builtinLoc(MODULE_NAME)
+      declRefExpr(name("_cilk_ws"))
     );
   local procargsvCastVoid :: Expr =
     explicitCastExpr(
@@ -659,41 +649,37 @@ Stmt ::= fname::Name args::Parameters returnsVoid::Boolean
         directTypeExpr(builtinType(nilQualifier(), voidType())),
         baseTypeExpr()
       ),
-      declRefExpr(name("_cilk_procargs_v", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-      location=builtinLoc(MODULE_NAME)
+      declRefExpr(name("_cilk_procargs_v"))
     );
 
-  local argsStructName :: Name = name("_cilk_" ++ fname.name ++ "_args", location=builtinLoc(MODULE_NAME));
+  local argsStructName :: Name = name("_cilk_" ++ fname.name ++ "_args");
   local procargsvCastStruct :: Expr =
     explicitCastExpr(
       typeName(
         tagReferenceTypeExpr(nilQualifier(), structSEU(), argsStructName),
         pointerTypeExpr(nilQualifier(), baseTypeExpr())
       ),
-      declRefExpr(name("_cilk_procargs_v", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-      location=builtinLoc(MODULE_NAME)
+      declRefExpr(name("_cilk_procargs_v"))
     );
   local procResult :: Expr =
     memberExpr(
       procargsvCastStruct,
       true,
-      name("_cilk_proc_result", location=builtinLoc(MODULE_NAME)),
-      location=builtinLoc(MODULE_NAME)
+      name("_cilk_proc_result")
     );
 
   local fastCloneArgs :: Exprs =
     consExpr(
-      declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+      declRefExpr(name("_cilk_ws")),
       makeFastCloneArgs(args, procargsvCastStruct)
     );
 
   local callFastClone :: Expr =
     directCallExpr(
       fname,
-      fastCloneArgs,
-      location=builtinLoc(MODULE_NAME)
+      fastCloneArgs
     );
-  local assignResult :: Expr = eqExpr(procResult, callFastClone, location=builtinLoc(MODULE_NAME));
+  local assignResult :: Expr = eqExpr(procResult, callFastClone);
 
   -- don't assign result if return void
   local mAssignResult :: Expr =
@@ -716,7 +702,7 @@ Decl ::= newName::Name bty::BaseTypeExpr retMty::TypeModifierExpr args::Paramete
 {
   local storage :: StorageClasses = nilStorageClass();
   local fnquals :: SpecialSpecifiers = nilSpecialSpecifier();
-  local exportProcName :: Name = name("mt_" ++ newName.name, location=builtinLoc(MODULE_NAME));
+  local exportProcName :: Name = name("mt_" ++ newName.name);
   local attrs :: Attributes = nilAttribute();
   local dcls :: Decls = nilDecl();
   local mty :: TypeModifierExpr = functionTypeExprWithArgs(retMty, exportFunctionArgs, false, nilQualifier());
@@ -724,9 +710,9 @@ Decl ::= newName::Name bty::BaseTypeExpr retMty::TypeModifierExpr args::Paramete
     consParameters(
       parameterDecl(
         nilStorageClass(),
-        typedefTypeExpr(nilQualifier(), name("CilkContext", location=builtinLoc(MODULE_NAME))),
-        pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
-        justName(name("context", location=builtinLoc(MODULE_NAME))),
+        typedefTypeExpr(nilQualifier(), name("CilkContext")),
+        pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+        justName(name("context")),
         nilAttribute()
       ),
       args
@@ -748,8 +734,8 @@ function makeExportBody
 Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::Parameters
               returnsVoid::Boolean
 {
-  local procArgsName :: Name = name("_cilk_procargs", location=builtinLoc(MODULE_NAME));
-  local procArgsStructName :: Name = name("_cilk_" ++ newName.name ++ "_args", location=builtinLoc(MODULE_NAME));
+  local procArgsName :: Name = name("_cilk_procargs");
+  local procArgsStructName :: Name = name("_cilk_" ++ newName.name ++ "_args");
   local procArgsStruct :: BaseTypeExpr =
     tagReferenceTypeExpr(nilQualifier(), structSEU(), procArgsStructName);
 
@@ -773,8 +759,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
 
   local sizeofArgs :: Expr =
     sizeofExpr(
-      typeNameExpr(typeName(procArgsStruct, baseTypeExpr())),
-      location=builtinLoc(MODULE_NAME)
+      typeNameExpr(typeName(procArgsStruct, baseTypeExpr()))
     );
 
   -- (struct _cilk_foo_args *) Cilk_malloc_fixed(sizeof(struct _cilk_foo_args));
@@ -786,28 +771,24 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
           pointerTypeExpr(nilQualifier(), baseTypeExpr())
         ),
         directCallExpr(
-          name("Cilk_malloc_fixed", location=builtinLoc(MODULE_NAME)),
-          foldExpr([sizeofArgs]),
-          location=builtinLoc(MODULE_NAME)
-        ),
-        location=builtinLoc(MODULE_NAME)
-      ),
-      location=builtinLoc(MODULE_NAME)
+          name("Cilk_malloc_fixed"),
+          foldExpr([sizeofArgs])
+        )
+      )
     );
 
   -- Cilk_free(_cilk_procargs);
   local freeProcArgs :: Stmt =
     exprStmt(
       directCallExpr(
-        name("Cilk_free", location=builtinLoc(MODULE_NAME)),
+        name("Cilk_free"),
         foldExpr([
-            declRefExpr(procArgsName, location=builtinLoc(MODULE_NAME))
-        ]),
-        location=builtinLoc(MODULE_NAME)
+            declRefExpr(procArgsName)
+        ])
       )
     );
 
-  local resultName :: Name = name("_cilk_proc_result", location=builtinLoc(MODULE_NAME));
+  local resultName :: Name = name("_cilk_proc_result");
   local resultDecl :: Stmt =
     if   returnsVoid
     then nullStmt()
@@ -831,35 +812,31 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
   local initResult :: Initializer =
     exprInitializer(
       memberExpr(
-        declRefExpr(procArgsName, location=builtinLoc(MODULE_NAME)),
+        declRefExpr(procArgsName),
         true,
-        resultName,
-        location=builtinLoc(MODULE_NAME)
-      ),
-      location=builtinLoc(MODULE_NAME)
+        resultName
+      )
     );
 
   local sizeofRet :: Expr =
     if   returnsVoid
-    then mkIntConst(0, builtinLoc(MODULE_NAME))
+    then mkIntConst(0)
     else
       sizeofExpr(
-        typeNameExpr(typeName(resultType, baseTypeExpr())),
-        location=builtinLoc(MODULE_NAME)
+        typeNameExpr(typeName(resultType, baseTypeExpr()))
       );
 
-  local importProcName :: Name = name("_cilk_" ++ newName.name ++ "_import", location=builtinLoc(MODULE_NAME));
+  local importProcName :: Name = name("_cilk_" ++ newName.name ++ "_import");
   local cilkStart :: Stmt =
     exprStmt(
       directCallExpr(
-        name("Cilk_start", location=builtinLoc(MODULE_NAME)),
+        name("Cilk_start"),
         foldExpr([
-            declRefExpr(name("context", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
-            declRefExpr(importProcName, location=builtinLoc(MODULE_NAME)),
-            declRefExpr(procArgsName, location=builtinLoc(MODULE_NAME)),
+            declRefExpr(name("context")),
+            declRefExpr(importProcName),
+            declRefExpr(procArgsName),
             sizeofRet
-        ]),
-        location=builtinLoc(MODULE_NAME)
+        ])
       )
     );
 
@@ -869,7 +846,7 @@ Stmt ::= newName::Name resultType::BaseTypeExpr retMty::TypeModifierExpr args::P
     else
       returnStmt(
         justExpr(
-          declRefExpr(resultName, location=builtinLoc(MODULE_NAME))
+          declRefExpr(resultName)
         )
       );
 
@@ -911,11 +888,10 @@ Stmt ::= arg::ParameterDecl procArgsName::Name
     exprStmt(
       eqExpr(
         memberExpr(
-          declRefExpr(procArgsName, location=builtinLoc(MODULE_NAME)),
-          true, n, location=builtinLoc(MODULE_NAME)
+          declRefExpr(procArgsName),
+          true, n
         ),
-        declRefExpr(n, location=builtinLoc(MODULE_NAME)),
-        location=builtinLoc(MODULE_NAME)
+        declRefExpr(n)
       )
     );
 }
@@ -939,7 +915,7 @@ Expr ::= arg::ParameterDecl procargsv::Expr
     | _        -> error("cilk function parameter must be named")
     end;
 
-  return memberExpr(procargsv, true, n, location=builtinLoc(MODULE_NAME));
+  return memberExpr(procargsv, true, n);
 }
 
 -- add CilkWorkerState*const _cilk_ws as the first parameter
@@ -965,9 +941,9 @@ TypeModifierExpr ::= mty::Decorated TypeModifierExpr
   local wsParam :: ParameterDecl =
     parameterDecl(
       nilStorageClass(),
-      typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
-      pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
-      justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
+      typedefTypeExpr(nilQualifier(), name("CilkWorkerState")),
+      pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+      justName(name( "_cilk_ws")),
       nilAttribute()
     );
 
@@ -1031,15 +1007,15 @@ top::Stmt ::= body::Stmt newName::Name args::Parameters
 function addFastStuff
 Stmt ::= newName::Name
 {
-  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtinLoc(MODULE_NAME));
-  local sigName :: Name = name("_cilk_" ++ newName.name ++ "_sig", location=builtinLoc(MODULE_NAME));
-  local frameName :: Name = name("_cilk_frame", location=builtinLoc(MODULE_NAME));
-  local ws :: Expr = declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME));
+  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame");
+  local sigName :: Name = name("_cilk_" ++ newName.name ++ "_sig");
+  local frameName :: Name = name("_cilk_frame");
+  local ws :: Expr = declRefExpr(name("_cilk_ws"));
 
   -- declare _cilk_frame and expand CILK2C_INIT_FRAME() macro
   local frameDecl :: Stmt =
     foldStmt([
-      exprStmt(comment("declare _cilk_frame and expand CILK2C_INIT_FRAME() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("declare _cilk_frame and expand CILK2C_INIT_FRAME() macro")),
       declStmt(
         variableDecls(
           nilStorageClass(),
@@ -1060,7 +1036,7 @@ Stmt ::= newName::Name
   local initFrame :: Initializer =
     exprInitializer(
       directCallExpr(
-        name("Cilk_cilk2c_init_frame", location=builtinLoc(MODULE_NAME)),
+        name("Cilk_cilk2c_init_frame"),
         foldExpr([
           ws,
           sizeofExpr(
@@ -1069,36 +1045,30 @@ Stmt ::= newName::Name
                 tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
                 baseTypeExpr()
               )
-            ),
-            location=builtinLoc(MODULE_NAME)
+            )
           ),
-          declRefExpr(sigName, location=builtinLoc(MODULE_NAME))
-        ]),
-        location=builtinLoc(MODULE_NAME)
-      ),
-      location=builtinLoc(MODULE_NAME)
+          declRefExpr(sigName)
+        ])
+      )
     );
 
   -- expand CILK2C_START_THREAD_FAST() macro
   local startThreadFastCp :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_START_THREAD_FAST() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_START_THREAD_FAST() macro")),
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_start_thread_fast_cp", location=builtinLoc(MODULE_NAME)),
+          name("Cilk_cilk2c_start_thread_fast_cp"),
           foldExpr([
             ws,
             mkAddressOf(
               memberExpr(
-                declRefExpr(frameName, location=builtinLoc(MODULE_NAME)),
+                declRefExpr(frameName),
                 true,
-                name("header", location=builtinLoc(MODULE_NAME)),
-                location=builtinLoc(MODULE_NAME)
-              ),
-              builtinLoc(MODULE_NAME)
+                name("header")
+              )
             )
-          ]),
-          location=builtinLoc(MODULE_NAME)
+          ])
         )
       )
     ]);
@@ -1106,9 +1076,8 @@ Stmt ::= newName::Name
   local eventNewThreadMaybe :: Stmt =
     exprStmt(
       directCallExpr(
-        name("Cilk_cilk2c_event_new_thread_maybe", location=builtinLoc(MODULE_NAME)),
-        foldExpr([ws]),
-        location=builtinLoc(MODULE_NAME)
+        name("Cilk_cilk2c_event_new_thread_maybe"),
+        foldExpr([ws])
       )
     );
 
@@ -1139,7 +1108,7 @@ Boolean ::= l::Pair<String a> r::Pair<String a>
 function slowClone
 Decl ::= newName::Name dcls::Decls body::Stmt
 {
-  local slowName :: Name = name("_cilk_" ++ newName.name ++ "_slow", location=builtinLoc(MODULE_NAME));
+  local slowName :: Name = name("_cilk_" ++ newName.name ++ "_slow");
   local void :: BaseTypeExpr = directTypeExpr(builtinType(nilQualifier(), voidType()));
 
   local newParams :: TypeModifierExpr =
@@ -1160,14 +1129,14 @@ Decl ::= newName::Name dcls::Decls body::Stmt
 function mkSlowParams
 Parameters ::= newName::Name
 {
-  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame", location=builtinLoc(MODULE_NAME));
+  local frameStructName :: Name = name("_cilk_" ++ newName.name ++ "_frame");
 
   local wsParam :: ParameterDecl =
     parameterDecl(
       nilStorageClass(),
-      typedefTypeExpr(nilQualifier(), name("CilkWorkerState", location=loc("ToDo",-10,-1,-1,-1,-1,-1))),
-      pointerTypeExpr(foldQualifier([constQualifier(location=bogusLoc())]), baseTypeExpr()),
-      justName(name( "_cilk_ws", location=loc("ToDo",-11,-1,-1,-1,-1,-1))),
+      typedefTypeExpr(nilQualifier(), name("CilkWorkerState")),
+      pointerTypeExpr(foldQualifier([constQualifier()]), baseTypeExpr()),
+      justName(name( "_cilk_ws")),
       nilAttribute()
     );
   local frame :: ParameterDecl =
@@ -1175,7 +1144,7 @@ Parameters ::= newName::Name
       nilStorageClass(),
       tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
       pointerTypeExpr(nilQualifier(), baseTypeExpr()),
-      justName(name("_cilk_frame", location=builtinLoc(MODULE_NAME))),
+      justName(name("_cilk_frame")),
       nilAttribute()
     );
 
@@ -1211,44 +1180,38 @@ top::Stmt ::= body::Stmt args::Parameters
   -- expand CILK2C_START_THREAD_SLOW() macro
   local startThreadSlow :: Stmt =
     foldStmt([
-      exprStmt(comment("expand CILK2C_START_THREAD_SLOW() macro", location=builtinLoc(MODULE_NAME))),
+      exprStmt(comment("expand CILK2C_START_THREAD_SLOW() macro")),
 
       -- Cilk_cilk2c_start_thread_slow_cp(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_start_thread_slow_cp", location=builtinLoc(MODULE_NAME)),
+          name("Cilk_cilk2c_start_thread_slow_cp"),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+            declRefExpr(name("_cilk_ws")),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+                declRefExpr(name("_cilk_frame")),
                 true,
-                name("header", location=builtinLoc(MODULE_NAME)),
-                location=builtinLoc(MODULE_NAME)
-              ),
-              builtinLoc(MODULE_NAME)
+                name("header")
+              )
             )
-          ]),
-          location=builtinLoc(MODULE_NAME)
+          ])
         )
       ),
       -- Cilk_cilk2c_start_thread_slow(_cilk_ws, &(_cilk_frame->header));
       exprStmt(
         directCallExpr(
-          name("Cilk_cilk2c_start_thread_slow", location=builtinLoc(MODULE_NAME)),
+          name("Cilk_cilk2c_start_thread_slow"),
           foldExpr([
-            declRefExpr(name("_cilk_ws", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+            declRefExpr(name("_cilk_ws")),
             mkAddressOf(
               memberExpr(
-                declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+                declRefExpr(name("_cilk_frame")),
                 true,
-                name("header", location=builtinLoc(MODULE_NAME)),
-                location=builtinLoc(MODULE_NAME)
-              ),
-              builtinLoc(MODULE_NAME)
+                name("header")
+              )
             )
-          ]),
-          location=builtinLoc(MODULE_NAME)
+          ])
         )
       )
     ]);
@@ -1261,14 +1224,12 @@ top::Stmt ::= body::Stmt args::Parameters
 --    switchStmt(
 --      memberExpr(
 --        memberExpr(
---          declRefExpr(name("_cilk_frame", location=builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)),
+--          declRefExpr(name("_cilk_frame")),
 --          true,
---          name("header", location=builtinLoc(MODULE_NAME)),
---          location=builtinLoc(MODULE_NAME)
+--          name("header")
 --        ),
 --        false,
---        name("entry", location=builtinLoc(MODULE_NAME)),
---        location=builtinLoc(MODULE_NAME)
+--        name("entry")
 --      ),
 --      makeSwitchHeaderCases(length(top.syncLocations))
 --    );
@@ -1297,8 +1258,8 @@ top::Stmt ::= body::Stmt args::Parameters
 --    else
 --      seqStmt(
 --        caseLabelStmt(
---            mkIntConst(syncCount, builtinLoc(MODULE_NAME)),
---            gotoStmt(name("_cilk_sync" ++ toString(syncCount), location=builtinLoc(MODULE_NAME)))
+--            mkIntConst(syncCount),
+--            gotoStmt(name("_cilk_sync" ++ toString(syncCount)))
 --        ),
 --        makeSwitchHeaderCases(syncCount - 1)
 --      );
@@ -1320,14 +1281,13 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
 {
   local sizeofRet :: Expr =
     if   returnsVoid
-    then mkIntConst(0, builtinLoc(MODULE_NAME))
+    then mkIntConst(0)
     else
       sizeofExpr(
-        typeNameExpr(typeName(bty, baseTypeExpr())),
-        location=builtinLoc(MODULE_NAME)
+        typeNameExpr(typeName(bty, baseTypeExpr()))
       );
 
-  local frameStructName :: Name = name("_cilk_" ++ fname.name ++ "_frame", location=builtinLoc(MODULE_NAME));
+  local frameStructName :: Name = name("_cilk_" ++ fname.name ++ "_frame");
   local sizeofFrame :: Expr =
     sizeofExpr(
       typeNameExpr(
@@ -1335,12 +1295,11 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
           tagReferenceTypeExpr(nilQualifier(), structSEU(), frameStructName),
           baseTypeExpr()
         )
-      ),
-      location=builtinLoc(MODULE_NAME)
+      )
     );
 
-  local slowCloneName :: Name = name("_cilk_" ++ fname.name ++ "_slow", location=builtinLoc(MODULE_NAME));
-  local slowClone :: Expr = declRefExpr(slowCloneName, location=builtinLoc(MODULE_NAME));
+  local slowCloneName :: Name = name("_cilk_" ++ fname.name ++ "_slow");
+  local slowClone :: Expr = declRefExpr(slowCloneName);
 
   local initSig :: Initializer =
     objectInitializer(
@@ -1349,19 +1308,17 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
           positionalInit(
             objectInitializer(
               foldInit([
-                positionalInit(exprInitializer(sizeofRet, location=builtinLoc(MODULE_NAME))),
-                positionalInit(exprInitializer(sizeofFrame, location=builtinLoc(MODULE_NAME))),
-                positionalInit(exprInitializer(slowClone, location=builtinLoc(MODULE_NAME))),
-                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME))),
-                positionalInit(exprInitializer(mkIntConst(0, builtinLoc(MODULE_NAME)), location=builtinLoc(MODULE_NAME)))
-              ]),
-              location=builtinLoc(MODULE_NAME)
+                positionalInit(exprInitializer(sizeofRet)),
+                positionalInit(exprInitializer(sizeofFrame)),
+                positionalInit(exprInitializer(slowClone)),
+                positionalInit(exprInitializer(mkIntConst(0))),
+                positionalInit(exprInitializer(mkIntConst(0)))
+              ])
             )
           ),
           reverse(bodyLinkage)
         )
-      ),
-      location=builtinLoc(MODULE_NAME)
+      )
     );
 
   return
@@ -1370,10 +1327,10 @@ Decl ::= fname::Name bty::BaseTypeExpr bodyLinkage::[Init] returnsVoid::Boolean
       variableDecls(
         foldStorageClass([staticStorageClass()]),
         nilAttribute(),
-        typedefTypeExpr(nilQualifier(), name("CilkProcInfo", location=builtinLoc(MODULE_NAME))),
+        typedefTypeExpr(nilQualifier(), name("CilkProcInfo")),
         foldDeclarator([
           declarator(
-            name("_cilk_" ++ fname.name ++ "_sig", location=builtinLoc(MODULE_NAME)),
+            name("_cilk_" ++ fname.name ++ "_sig"),
             arrayTypeExprWithoutExpr(baseTypeExpr(), nilQualifier(), normalArraySize()),
             nilAttribute(),
             justInitializer(initSig)

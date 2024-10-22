@@ -31,7 +31,7 @@ Stmt ::= f::Expr args::Exprs
             directTypeExpr(builtinType(nilQualifier(), signedType(intType()))),
             foldDeclarator([
               declarator(
-                name("_u", location=builtinLoc(MODULE_NAME)),
+                name("_u"),
                 baseTypeExpr(),
                 nilAttribute(),
                 nothingInitializer()
@@ -40,8 +40,7 @@ Stmt ::= f::Expr args::Exprs
           )
         ),
         cilkSpawnStmt(
-          declRefExpr(name("_u", location=builtinLoc(MODULE_NAME)),
-            location=builtinLoc(MODULE_NAME)),
+          declRefExpr(name("_u")),
           f, args)
       ]));
 }

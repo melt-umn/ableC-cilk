@@ -19,7 +19,7 @@ top::Stmt_c ::= 'spawn' sb::SpawnBody
   top.ast = sb.ast;
 }
 
-nonterminal SpawnBody with location, ast<abs:Stmt> ;
+nonterminal SpawnBody with ast<abs:Stmt> ;
 concrete productions sb::SpawnBody
 | l::UnaryExpr_c  op::AssignOp_c  f::PostfixExpr_c '(' args::ArgumentExprList_c ')' ';'
   {
