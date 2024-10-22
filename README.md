@@ -1,3 +1,5 @@
+**This extension is not currently maintained**
+
 # ableC-cilk
 
 The Cilk parallel programming constructs implemented as a language
